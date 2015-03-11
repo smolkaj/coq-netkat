@@ -6,7 +6,6 @@ Require Import Sets.
 Require Import FunctionalExtensionality.
 Require Import Bool.
 Require Import Equalities.
-Set Implicit Arguments.
 
 Require Import CpdtTactics.
 
@@ -17,7 +16,7 @@ Fixpoint list_eqb {X : Type} (eqb : X -> X -> bool) (xs : list X) (ys : list X) 
   | _,_ => false
   end.
 
-Lemma list_eqb_eq : forall X : Type, forall (eqb : X -> X -> bool),
+Lemma list_eqb_eq : forall {X : Type}, forall (eqb : X -> X -> bool),
   forall p : (forall x y : X, eqb x y = true <-> x = y),
   forall l1 l2 : list X, list_eqb eqb l1 l2 = true <-> l1 = l2.
 Proof.
@@ -44,21 +43,23 @@ Proof.
   inversion H.
   split; reflexivity.
 Qed.
-  
-
+ 
 
 Module Type PACKET (F : FIELDSPEC) (V : VALUESPEC(F)).
-  Include UsualDecidableTypeFull.
+  Definition t : Type := forall f:F.t, (V.t f).
   Parameter mod : t -> forall f : F.t, V.t f -> t.
-  Notation "pk [ f := v ]" := (mod pk f v) (at level 8, left associativity).
+  (* Print UsualDecidableTypeFull *)
+  Definition eq (p1 p2 : t) := (p1 = p2).
+  Parameter eq_dec : forall x y : t, {x = y} + {x <> y}.
+  Parameter eqb : t -> t -> bool.
+  Parameter eqb_eq : forall x y : t, eqb x y = true <-> x = y.
 End PACKET.
 
-
-Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) : PACKET(F)(V).
+Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) <: PACKET(F)(V).
   
   Module Skeleton.
 
-  Definition t : Set := forall f:F.t, (V.t f).
+  Definition t : Type := forall f:F.t, (V.t f).
 
   Definition eq (p1:t) (p2:t) := p1=p2.
 
@@ -91,8 +92,6 @@ Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) : PACKET(F)(V).
       | left e => eq_rec_r V.t v e
       | right ne => pk f'
       end.
-
-  Notation "pk [ f := v ]" := (mod pk f v) (at level 8, left associativity).
 
 End Packet.
 
@@ -144,6 +143,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Module P := Packet(F)(V).
   Module H := History(F)(V)(P).
+  Module HSet := set(H).
   
   Inductive policy : Set :=
   | Drop : policy
@@ -156,12 +156,15 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   | Star    : policy -> policy
   | Dup     : policy.
 
-  Notation "f <- v" := (Mod f v) (at level 20, no associativity).
-  Notation "f == v" := (Filter f v) (at level 20, no associativity).
-  Notation "f != v" := (NFilter f v) (at level 20, no associativity).
-  Notation "p + q" := (Union p q). (* at level 50 *)
+  Notation "f <- v" := (Mod f v) (at level 30, no associativity).
+  Notation "f == v" := (Filter f v) (at level 30, no associativity).
+  Notation "f != v" := (NFilter f v) (at level 30, no associativity).
+  Notation "p + q" := (Union p q) (at level 50, left associativity).
   Notation "p ; q" := (Seq p q) (at level 40, left associativity).
   Notation "p *" := (Star p) (at level 31, left associativity).
+  Notation "pk [ f := v ]" := (P.mod pk f v) (at level 10, no associativity).
+
+  Check P.mod.
 
   Fixpoint fpower {X : Type} (n : nat) (f : X -> X):=
   match n with
@@ -169,72 +172,163 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   | S n => fun x => fpower n f (f x)
   end.
 
-  Definition lift_arg {X : Type} (f : X -> Ensemble X) (A : Ensemble X) : Ensemble X :=
-    fun x => ex (fun y => and (A y) (f y x)).
+  Definition kleisli (f g : H.t -> HSet.t) : H.t -> HSet.t :=
+    fun (h : H.t) =>
+      fun (h' : H.t) => ex (fun h'' => f h h'' /\ g h'' h').
 
-  Fixpoint interpret (p : policy) (h : history) : Ensemble history :=
+  Fixpoint interpret (p : policy) (h : H.t) : HSet.t :=
   match p, h with
   | Drop, _ => 
-      Empty_set history
+      HSet.empty
   | Id, h => 
-      Singleton history h
-  | f==v, (pk,h) =>
-      if V.eq_dec f (pk f) v then Singleton history (pk,h)
-      else Empty_set history
-  | f!=v, (pk,h) =>
-      if V.eq_dec f (pk f) v then Empty_set history
-      else Singleton history (pk,h)
-  | f<-v, (pk,h) => 
-      Singleton history (pk[f:=v], h)
+      HSet.singleton h
+  | Filter f v, (pk,h) =>
+      if V.eqb f (pk f) v then HSet.singleton (pk,h)
+      else HSet.empty
+  | NFilter f v, (pk,h) =>
+      if negb (V.eqb f (pk f) v) then HSet.singleton (pk,h)
+      else HSet.empty
+  | Mod f v, (pk,h) => 
+      HSet.singleton (pk[f:=v], h)
   | p+q, h =>
-      Ensembles.Union history (interpret p h) (interpret q h)
+      HSet.union (interpret p h) (interpret q h)
   | p;q, h =>
-      lift_arg (interpret q) (interpret p h)
+      kleisli (interpret p) (interpret q) h
   | p*, h =>
-      let pn n := fpower n (lift_arg (interpret p)) in
-      fun h' => ex (fun n => pn n (Singleton history h) h')
+      let pn n := fpower n (kleisli (interpret p)) HSet.singleton in
+      fun h' => ex (fun n => pn n h h')
   | Dup, (pk,h) => 
-      Singleton history (pk, pk::h)
+      HSet.singleton (pk, pk::h)
   end.
 
-  Notation "'|' p '|'" := (interpret p) (at level 10).
-  Notation "p === q" := (forall h, |p| h  = |q| h) (at level 80).
+  Notation "'[|' p '|]'" := (interpret p) (at level 1).
+  Notation "p === q" := (forall h : H.t, HSet.eq ([|p|] h) ([|q|] h)) (at level 80).
+  
+  (* Since we have eq_equiv : Equivalence HSet.eq, we can use reflexivity, symmetry,
+     and rewrite with === *)
 
-  Require Import Classical_sets.
-  Require Import CpdtTactics.
+  Lemma kleisli_assoc: forall p q r h,
+    HSet.eq (kleisli (kleisli p q) r h) (kleisli p (kleisli q r) h).
+  Proof.
+    intros p q r h0.
+    unfold HSet.eq.
+    intros h1.
+    split; intros H; destruct H as [h']; destruct H as [H1 H2].
+      destruct H1 as [h''].
+      destruct H as [H0 H1].
+      eapply ex_intro.
+      split.
+        apply H0.
+      eapply ex_intro.
+        split. apply H1. apply H2.
+    destruct H2 as [h''].
+      destruct H as [H2 H3].
+      repeat (eapply ex_intro; split).
+      apply H1. apply H2. apply H3.
+   Qed.
 
   Theorem ka_plus_assoc : forall p q r : policy, (p+q)+r === p+(q+r).
   Proof.
    intros p q r h.
-   simpl.
-   apply Extensionality_Ensembles.
-   auto.
-   crush.
-   rewrite -> (union_assoc history).
-   reflexivity.
+   apply HSet.union_assoc.
   Qed.
 
-  Theorem ka_plus_com : forall p q : policy, p + q === q + p.
+  Theorem ka_plus_comm : forall p q : policy, p + q === q + p.
   Proof.
-   intros p q h h'.
+   intros p q h.
    simpl.
-   rewrite -> (union_comm history).
-   reflexivity.
+   apply HSet.union_comm.
   Qed.
 
   Theorem ka_pluz_zero : forall p : policy, p + Drop === p.
   Proof.
-    intros p h h'.
+    intros p h.
     simpl.
+    apply HSet.union_empty_right.
+  Qed.
+
+  Theorem ka_seq_assoc : forall p q r : policy, (p;q);r === p;(q;r).
+  Proof.
+    intros p q r h.
+    simpl.
+    apply kleisli_assoc.
+  Qed.
+
+  Theorem ka_one_seq : forall p : policy, Id; p === p.
+  Proof.
+    intros p h h'.
+    split; intro H.
+      destruct H as [h''].
+      destruct H as [H0 H1].
+      simpl in H0.
+      unfold HSet.singleton in H0.
+      subst h''.
+      assumption.
+    simpl.
+      eapply ex_intro.
+      split. apply HSet.singleton_refl. apply H.
+  Qed.
+
+  Theorem ka_seq_one : forall p : policy, p; Id === p.
+  Proof.
+    intros p h h'.
+    split; intro H.
+      destruct H as [h''].
+      destruct H as [H0 H1].
+      simpl in H1.
+      unfold HSet.singleton in H1.
+      subst h''.
+      assumption.
+    simpl.
+      eapply ex_intro.
+      split. apply H. apply HSet.singleton_refl.
+  Qed.
+
+  Theorem ka_seq_dist_l : forall p q r : policy,
+    p; (q + r) === p;q + (p; r).
+  Proof.
+    intros p q r h h''.
+    split; intro H.
+      destruct H as [h'].
+      destruct H as [H0 H1].
+      destruct H1 as [H1|H1]; [left | right]; exists h'; auto.
+    destruct H as [H|H]; destruct H as [h']; destruct H as [H1 H2];
+    exists h';split; try (apply H1).
+    apply HSet.union_mono_left; assumption.
+    apply HSet.union_mono_right; assumption.
+  Qed.
+
+  Theorem ka_seq_dist_r : forall p q r : policy,
+    (p + q); r === p;r + q; r.
+  Proof.
+    intros p q r h h''.
+    split; intro H.
+      destruct H as [h'].
+      destruct H as [H1 H0].
+      destruct H1 as [H1|H1]; [left | right]; exists h'; auto.
+    destruct H as [H|H]; destruct H as [h']; destruct H as [H1 H2];
+    exists h'; split; try assumption.
+    apply HSet.union_mono_left; assumption.
+    apply HSet.union_mono_right; assumption.
+  Qed.
+
+  Theorem ka_zero_seq : forall p : policy, Drop; p === Drop.
+  Proof.
+    intros p h h'.
+    crush.
+    destruct H as [h'']. destruct H as [contr _].
+    contradiction.
+  Qed.
+
+  Theorem ka_seq_zero : forall p : policy, p; Drop === Drop.
+  Proof.
+    intros p h h'.
+    crush.
+    destruct H as [h'']. destruct H as [_ contr].
+    contradiction.
+  Qed.
 
 
 End NetKAT.
 
-Module N := NetKAT(Headers).
-Import N.
-Import Headers.
 
-Definition pk1 (f : F) := 1.
-
-Definition pk2 := pk1 [Port := 2][Vlan := 5].
-Eval cbv in pk2 Port.
