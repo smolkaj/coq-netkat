@@ -54,3 +54,5 @@ Proof.
   try(intros v);
   netkat.
 Qed.
+
+End Optimize.
