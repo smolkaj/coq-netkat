@@ -349,13 +349,13 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
      then discharges all trivial goals. *)
   Ltac netkat :=
     try(simpl; reflexivity);
-    try(repeat(rewrite -> ka_plus_zero));
-    try(repeat(rewrite -> ka_zero_plus));
-    try(repeat(rewrite -> ka_plus_idem));
-    try(repeat(rewrite -> ka_seq_zero));
-    try(repeat(rewrite -> ka_zero_seq));
-    try(repeat(rewrite -> ka_seq_one));
-    try(repeat(rewrite -> ka_one_seq));
+    repeat(rewrite -> ka_plus_zero);
+    repeat(rewrite -> ka_zero_plus);
+    repeat(rewrite -> ka_plus_idem);
+    repeat(rewrite -> ka_seq_zero);
+    repeat(rewrite -> ka_zero_seq);
+    repeat(rewrite -> ka_seq_one);
+    repeat(rewrite -> ka_one_seq);
     try(simpl; reflexivity).
 
   (* Tactic that does case splits on two policies and then tries
