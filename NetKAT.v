@@ -400,15 +400,49 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
         assumption.
     right. assumption.
   Qed.
+
+  Lemma ka_plus_leq: forall p q r, (p + q <== r) <-> (p <== r /\ q <== r).
+  Proof.
+    intros p q r.
+    split; intro H.
+      split;intros h h';split; intro H'.
+        destruct H'. apply H. left. left. assumption. assumption.
+        right; assumption.
+        apply H. destruct H' as [H0|H0]; [left;right|right]; assumption.
+        right; assumption.
+    destruct H as [H0 H1].
+    intros h h'.
+    split; intro H.
+      destruct H as [H|H].
+        destruct H as [H|H]; [apply H0 | apply H1]; left; assumption.
+        assumption.
+    right. assumption.
+  Qed.
+
+  (*
     
   Theorem ka_lfp_l: forall p q r, (q + p;r <== r) -> (p*;q <== r).
   Proof.
     intros p q r H.
-    split; intros H1.
-    apply H.
+    rewrite -> ka_plus_leq in H.
+    destruct H as [H0 H1].
+    intros h h'.
+    split; intros H.
+      destruct H.
+        destruct H as [h'']; destruct H as [H2 H3]. destruct H2 as [n].
+        generalize dependent h''.
+        induction n; intros h'' H2 H3.
+          apply H0. left. simpl in H2. unfold HSet.singleton in H2. subst h''. assumption.
+        simpl in H2. apply power_slide' in H2.
+          apply (IHn h'').
+          destruct H2 as [h''']. destruct H as [H2 H4].
+          apply (IHn h'''). assumption.
+    
     admit.
     admit.
   Qed.
+
+  *)
     
 
   (** * Tactics for automated axiomatic reasoning *)
