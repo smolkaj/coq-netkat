@@ -9,6 +9,7 @@ Require Export Sets.
 Require Import FunctionalExtensionality.
 Require Import Bool.
 Require Import Equalities.
+Require Import Relations.
 Require Import CpdtTactics.
 
 
@@ -46,7 +47,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
 
 
-  (** * NetKAT denotation Semantics *)
+  (** * NetKAT denotational Semantics *)
 
   (* auxilliary functions for (repeated) kleisli composition *) 
   Definition kleisli (f g : H.t -> HSet.t) : H.t -> HSet.t :=
@@ -85,11 +86,26 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   end.
 
   Notation "'[|' p '|]'" := (interpret p) (at level 1).
-  (* Denotational equivalence. This definition is useful since HSet.eq is
-     an equivalence relation. Therefore Coq allows us to use tactics such
-     as reflexivity, symmetry, and rewrite *)
-  Notation "p === q" := 
-    (forall h : H.t, HSet.eq ([|p|] h) ([|q|] h)) (at level 80).
+
+  (* Denotational equivalence. *)
+  Definition equiv : relation policy := 
+    fun p q => forall h, HSet.eq ([|p|] h) ([|q|] h).
+
+  Lemma equiv_refl : Reflexive equiv.
+    Proof. intros p h. reflexivity. Qed.
+
+  Lemma equiv_sym : Symmetric equiv.
+  Proof. intros p q H h. symmetry. apply (H h). Qed.
+
+  Lemma equiv_trans : Transitive equiv.
+  Proof. intros p q r H1 H2 h. rewrite -> (H1 h). apply (H2 h). Qed.
+
+  (* This allows us to use reflexivity, symmetry, and rewrite for denotational equivalence *)
+  Instance equiv_equiv : Equivalence equiv.
+  Proof. split; [apply equiv_refl | apply equiv_sym | apply equiv_trans]. Qed. 
+
+  Notation "p === q" := (equiv p q) (at level 80).
+  Notation "p <== q" := (p + q === q) (at level 80).
 
 
 
@@ -185,7 +201,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Corollary ka_zero_plus: forall p : policy, Drop + p === p.
   Proof. 
-    intros p h.
+    intros p.
     rewrite -> ka_plus_comm; rewrite -> ka_plus_zero; reflexivity.
   Qed.
 
@@ -337,6 +353,61 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     destruct H as [h'']. destruct H as [H0 H1].
     exists h''.
     split; [exists n| ]; assumption.
+  Qed.
+
+  Lemma ka_seq_mon_left: forall p q r, p <== q -> p;r <== q;r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0.
+      destruct H0.
+        destruct H0 as [h'']. destruct H0 as [H0 H1]. exists h''. split. 
+          apply H. apply HSet.union_mono_left; assumption.
+        assumption.
+      assumption.
+    apply HSet.union_mono_right; assumption.
+  Qed.
+
+  Lemma ka_seq_mon_right: forall p q r, q <== r -> p;q <== p;r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0.
+      destruct H0.
+        destruct H0 as [h'']. destruct H0 as [H0 H1]. exists h''. split.
+          assumption.
+        apply H. apply HSet.union_mono_left; assumption.
+      assumption.
+    apply HSet.union_mono_right; assumption.
+  Qed.
+
+  Lemma ka_plus_mon_left: forall p q r, p<==q -> p + r <== q + r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0.
+      destruct H0. destruct H0.
+        left. apply H. left. assumption.
+        right. assumption.
+        assumption.
+    right. assumption.
+  Qed.
+
+  Lemma ka_plus_mon_right: forall p q r, q<==r -> p + q <== p + r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0.
+      destruct H0. destruct H0.
+        left. assumption.
+        right. apply H. left. assumption.
+        assumption.
+    right. assumption.
+  Qed.
+    
+  Theorem ka_lfp_l: forall p q r, (q + p;r <== r) -> (p*;q <== r).
+  Proof.
+    intros p q r H.
+    split; intros H1.
+    apply H.
+    admit.
+    admit.
   Qed.
     
 

@@ -30,13 +30,13 @@ Definition mk_star (p : policy) :=
 
 Lemma mk_union_sound: forall p q : policy, p + q === mk_union p q.
 Proof.
-  intros p q h.
+  intros p q.
   netkat_cases p q.
 Qed.
 
 Lemma mk_seq_sounds: forall p q : policy, p;q === mk_seq p q.
 Proof.
-  intros p q h.
+  intros p q.
   netkat_cases p q.
 Qed.
 
