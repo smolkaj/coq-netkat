@@ -82,6 +82,14 @@ Proof.
   unfold union; right; assumption.
 Qed.
 
+Lemma union_idem : forall A : t,
+  union A A == A.
+Proof.
+  intros A x.
+  unfold union.
+  crush.
+Qed.
+
 Lemma singleton_iff : forall x y: X.t,
   singleton x y <-> x=y.
 Proof. unfold singleton. reflexivity. Qed.
@@ -89,7 +97,9 @@ Proof. unfold singleton. reflexivity. Qed.
 Lemma singleton_refl : forall x : X.t,
   singleton x x.
 Proof. unfold singleton. reflexivity. Qed.
-  
-Hint Resolve union_empty_right union_empty_left singleton_refl.
+
+Hint Unfold singleton full.
+Hint Resolve union_empty_right union_empty_left union_idem singleton_refl.
+Hint Rewrite union_empty_right union_empty_left union_idem.
 
 End set.
