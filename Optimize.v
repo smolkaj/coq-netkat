@@ -31,28 +31,13 @@ Definition mk_star (p : policy) :=
 Lemma mk_union_sound: forall p q : policy, p + q === mk_union p q.
 Proof.
   intros p q h.
-  case p;
-  netkat;
-  case q;
-  try(rewrite -> ka_plus_zero);
-  try(simpl; reflexivity);
-  try(intros a);
-  netkat;
-  try(intros b);
-  netkat.
+  netkat_cases p q.
 Qed.
 
 Lemma mk_seq_sounds: forall p q : policy, p;q === mk_seq p q.
 Proof.
   intros p q h.
-  case p;
-  netkat;
-  case q;
-  netkat;
-  try(intros f);
-  netkat;
-  try(intros v);
-  netkat.
+  netkat_cases p q.
 Qed.
 
 End Optimize.

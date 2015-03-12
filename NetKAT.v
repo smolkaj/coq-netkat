@@ -140,6 +140,28 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     assumption.
   Qed.
 
+  Lemma power_slide: forall n f h, 
+    HSet.eq (power (S n) f h) (kleisli (power n f) f h).
+  Proof.
+    intros n.
+    induction n; intros f h.
+    simpl. unfold HSet.singleton. unfold kleisli. split; intros H.
+      destruct H as [h'']; destruct H as [H0 H1]. subst h''. exists h. auto.
+      destruct H as [h'']; destruct H as [H0 H1]. subst h''. exists x. auto.
+    assert (HSet.eq (kleisli f (power (S n) f) h) (kleisli (kleisli f (power n f)) f h)).
+      rewrite -> kleisli_assoc.
+      intros h'.
+      split; intros H; destruct H as [h'']; destruct H as [H0 H1];
+      exists h''; split; try(apply IHn); assumption.
+    auto.
+  Qed.
+
+  Corollary power_slide': forall n f h, 
+    HSet.eq (kleisli f (power n f) h) (kleisli (power n f) f h).
+  Proof.
+    apply power_slide.
+  Qed.
+
   (* NetKAT axioms and useful corollaries *)
   Theorem ka_plus_assoc : forall p q r : policy, (p+q)+r === p+(q+r).
   Proof.
@@ -286,10 +308,45 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     assumption.
   Qed.
 
-  Hint Rewrite ka_plus_assoc ka_plus_zero ka_zero_plus ka_plus_idem
-    ka_seq_assoc ka_one_seq ka_seq_one ka_zero_seq ka_zero_plus ka_seq_zero.
+  Theorem ka_unroll_r : forall p : policy, Id + p*;p === p*.
+  Proof.
+    intros p h h'.
+    split; intros H.
+      destruct H as [H|H].
+        simpl in H.
+        unfold HSet.singleton in H.
+        subst h'.
+        exists 0.
+        simpl.
+        unfold HSet.singleton; reflexivity.
+      destruct H as [h'']. destruct H as [H0 H1].
+        destruct H0 as [n].
+        exists (S n).
+        simpl.
+        apply power_slide.
+        exists h''.
+        auto.
+    destruct H as [n].
+    destruct n; simpl in H.
+      unfold HSet.singleton in H.
+      subst h'.
+      left.
+      simpl; auto.
+    right.
+    apply (power_slide' n [|p|] h) in H.
+    destruct H as [h'']. destruct H as [H0 H1].
+    exists h''.
+    split; [exists n| ]; assumption.
+  Qed.
     
 
+  (** * Tactics for automated axiomatic reasoning *)
+  
+  Hint Rewrite ka_plus_assoc ka_plus_zero ka_zero_plus ka_plus_idem
+    ka_seq_assoc ka_one_seq ka_seq_one ka_zero_seq ka_zero_plus ka_seq_zero.
+
+  (* Tactic that tries to rewrite using all "safe" rules and
+     then discharges all trivial goals. *)
   Ltac netkat :=
     try(simpl; reflexivity);
     try(repeat(rewrite -> ka_plus_zero));
@@ -300,6 +357,17 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     try(repeat(rewrite -> ka_seq_one));
     try(repeat(rewrite -> ka_one_seq));
     try(simpl; reflexivity).
+
+  (* Tactic that does case splits on two policies and then tries
+     to solve goals using axiomatic rewriting *)
+  Ltac netkat_cases p q :=
+    case p; case q;
+    netkat;
+    try (intros f);
+    netkat;
+    try (intros v);
+    netkat.
+    
 
 
 End NetKAT.
