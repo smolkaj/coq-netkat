@@ -10,6 +10,7 @@ Require Import FunctionalExtensionality.
 Require Import Bool.
 Require Import Equalities.
 Require Import Relations.
+Require Import Morphisms.
 Require Import CpdtTactics.
 
 
@@ -106,6 +107,72 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Notation "p === q" := (equiv p q) (at level 80).
   Notation "p <== q" := (p + q === q) (at level 80).
+
+
+  (* The NetKAT operators are "proper" w.r.t. equivalence ===,
+     i.e. p===q -> p + r === p + q, etc. We need to make Coq aware of this
+     explicitly so we can use the rewrite tactic.
+     See www.labri.fr/perso/casteran/CoqArt/TypeClassesTut/typeclassestut.pdf
+     Section 3.5 for details. *)
+
+  Lemma plus_equiv_right: forall p q r, q === r -> p + q === p + r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0; (destruct H0; [left | right;apply H]); assumption.
+  Qed.
+
+  Lemma plus_equiv_left: forall p q r, p === q -> p + r === q + r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0; (destruct H0; [left;apply H | right]); assumption.
+  Qed.
+   
+  Instance plus_equiv_proper_right (p : policy) :
+    Proper (equiv ==> equiv) (Union p).
+  Proof. intros q r H. apply plus_equiv_right; assumption. Qed.
+
+  Instance plus_equiv_proper_left (p : policy) :
+    Proper (equiv ==> equiv) (fun q => Union q p).
+  Proof. intros q r H. apply plus_equiv_left; assumption. Qed.
+
+
+  Lemma seq_equiv_right: forall p q r, q === r -> p ; q === p ; r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
+    apply H in H1; exists h''; auto.
+  Qed.
+
+  Lemma seq_equiv_left: forall p q r, p === q -> p ; r === q ; r.
+  Proof.
+    intros p q r H h h'.
+    split; intros H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
+    apply H in H0; exists h''; auto.
+  Qed.
+
+  Instance seq_equiv_proper_right (p : policy) :
+    Proper (equiv ==> equiv) (Seq p).
+  Proof. intros q r H. apply seq_equiv_right; assumption. Qed.
+
+  Instance seq_equiv_proper_left (p : policy) :
+    Proper (equiv ==> equiv) (fun q => Seq q p).
+  Proof. intros q r H. apply seq_equiv_left; assumption. Qed.
+
+ 
+  Lemma star_equiv: forall p q, p === q -> p* === q*.
+  Proof.
+    intros p q H h h'.
+    split; 
+      (intros H0; destruct H0 as [n]; exists n;
+       generalize dependent h';  generalize dependent h;
+       induction n; intuition);
+      simpl in H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
+      apply H in H0; simpl; exists h''; split; try(apply IHn); assumption.
+  Qed.
+
+  Instance star_equiv_proper :
+    Proper (equiv ==> equiv) Star.
+  Proof. intros p q. apply star_equiv; assumption. Qed.
 
 
 
@@ -420,7 +487,6 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Qed.
 
   (*
-    
   Theorem ka_lfp_l: forall p q r, (q + p;r <== r) -> (p*;q <== r).
   Proof.
     intros p q r H.
@@ -430,18 +496,15 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     split; intros H.
       destruct H.
         destruct H as [h'']; destruct H as [H2 H3]. destruct H2 as [n].
-        generalize dependent h''.
-        induction n; intros h'' H2 H3.
-          apply H0. left. simpl in H2. unfold HSet.singleton in H2. subst h''. assumption.
-        simpl in H2. apply power_slide' in H2.
-          apply (IHn h'').
-          destruct H2 as [h''']. destruct H as [H2 H4].
+        induction n.
+          apply H0. left. simpl in H. unfold HSet.singleton in H. subst h''. assumption.
+        simpl in H. apply power_slide' in H.
+          destruct H as [h''']. destruct H as [H2 H4].
           apply (IHn h'''). assumption.
     
     admit.
     admit.
   Qed.
-
   *)
     
 
