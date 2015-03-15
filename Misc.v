@@ -30,9 +30,3 @@ Proof.
   inversion H.
   split; reflexivity.
 Qed.
-
-Fixpoint mk_list {X : Type} (n : nat) (f : nat -> X) :=
-  match n with
-    | O => nil
-    | S n => f n :: mk_list n f
-  end.
