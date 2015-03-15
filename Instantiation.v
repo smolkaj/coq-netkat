@@ -2,8 +2,7 @@
     This template can be easily adapted to introduce new fields,
     different values, etc. *)
 
-Require Import Field.
-Require Import Value.
+Require Import Optimize.
 Require Import List.
 Import ListNotations.
 
@@ -79,3 +78,6 @@ Module V : VALUESPEC(F).
   Qed.
 
 End V.
+
+Module N := Optimize.Optimize(F)(V).
+Print N.

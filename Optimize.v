@@ -1,4 +1,4 @@
-Require Import NetKAT.
+Require Export NetKAT.
 
 Module Optimize (F : FIELDSPEC) (V : VALUESPEC(F)).
 
