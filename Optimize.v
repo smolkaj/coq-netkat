@@ -1,5 +1,4 @@
 Require Import NetKAT.
-Require Import CpdtTactics.
 
 Module Optimize (F : FIELDSPEC) (V : VALUESPEC(F)).
 
@@ -48,13 +47,43 @@ Proof.
   netkat_cases p q.
 Qed.
 
-Lemma mk_star_sound: forall p : policy, mk_star p === p*.
+Lemma star_zero: Drop* === Id.
 Proof.
-  admit.
+  rewrite <- ka_unroll_l.
+  netkat.
 Qed.
 
-Hint Rewrite mk_union_sound mk_seq_sound mk_star_sound.
-Hint Resolve mk_union_sound mk_seq_sound mk_star_sound.
+Lemma star_one_aux: forall n h, HSet.eq (power n [|Id|] h) ([|Id|] h).
+Proof.
+  induction n; intros h h'.
+    intuition.
+  split; intros H.
+    simpl in H. destruct H as [h'']. destruct H as [H0 H1].
+    unfold HSet.singleton in H0. subst h''. apply IHn in H1. assumption.
+  simpl. exists h. intuition. apply IHn. assumption.
+Qed.
+
+Lemma star_one: Id* === Id.
+Proof.
+  intros h h'.
+  split; intros H.
+  destruct H as [n].
+  apply (star_one_aux n h). assumption.
+  exists 0. simpl. apply H.
+Qed.
+
+Lemma mk_star_sound: forall p : policy, mk_star p === p*.
+Proof.
+  intros p.
+  case p; netkat.
+    rewrite -> star_zero. simpl. reflexivity.
+  rewrite -> star_one. simpl. reflexivity.
+Qed.
+
+Hint Rewrite mk_union_sound mk_seq_sound mk_star_sound star_zero star_one_aux
+ star_one.
+Hint Resolve mk_union_sound mk_seq_sound mk_star_sound star_zero star_one_aux
+ star_one.
 
 Theorem optimize_sound: forall p : policy, p === optimize p.
 Proof.

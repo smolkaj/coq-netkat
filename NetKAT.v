@@ -11,7 +11,6 @@ Require Import Bool.
 Require Import Equalities.
 Require Import Relations.
 Require Import Morphisms.
-Require Import CpdtTactics.
 
 
 Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
@@ -347,16 +346,18 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Theorem ka_zero_seq : forall p : policy, Drop; p === Drop.
   Proof.
     intros p h h'.
-    crush.
-    destruct H as [h'']. destruct H as [contr _].
+    split; intros H.
+      destruct H as [h'']. destruct H as [contr _].
+      contradiction.
     contradiction.
   Qed.
 
   Theorem ka_seq_zero : forall p : policy, p; Drop === Drop.
   Proof.
     intros p h h'.
-    crush.
-    destruct H as [h'']. destruct H as [_ contr].
+    split; intros H.
+      destruct H as [h'']. destruct H as [_ contr].
+      contradiction.
     contradiction.
   Qed.
 
@@ -517,14 +518,16 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
      then discharges all trivial goals. *)
   Ltac netkat :=
     try(simpl; reflexivity);
-    repeat(rewrite -> ka_plus_zero);
-    repeat(rewrite -> ka_zero_plus);
-    repeat(rewrite -> ka_plus_idem);
-    repeat(rewrite -> ka_seq_zero);
-    repeat(rewrite -> ka_zero_seq);
-    repeat(rewrite -> ka_seq_one);
-    repeat(rewrite -> ka_one_seq);
-    try(simpl; reflexivity).
+    repeat(
+      repeat(rewrite -> ka_plus_zero);
+      repeat(rewrite -> ka_zero_plus);
+      repeat(rewrite -> ka_plus_idem);
+      repeat(rewrite -> ka_seq_zero);
+      repeat(rewrite -> ka_zero_seq);
+      repeat(rewrite -> ka_seq_one);
+      repeat(rewrite -> ka_one_seq);
+      try(simpl; reflexivity)
+    ).
 
   (* Tactic that does case splits on two policies and then tries
      to solve goals using axiomatic rewriting *)

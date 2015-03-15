@@ -2,7 +2,6 @@ Require Import Equalities.
 Require Import List.
 Require Import FunctionalExtensionality.
 Require Import Relations.
-Require Import CpdtTactics.
 
 Module set(X : UsualDecidableTypeFull).
 
@@ -57,7 +56,7 @@ Proof.
   intros A x.
   unfold union.
   unfold empty.
-  crush.
+  intuition.
 Qed.
 
 Lemma union_empty_left : forall A : t,
@@ -87,7 +86,7 @@ Lemma union_idem : forall A : t,
 Proof.
   intros A x.
   unfold union.
-  crush.
+  intuition.
 Qed.
 
 Lemma singleton_iff : forall x y: X.t,

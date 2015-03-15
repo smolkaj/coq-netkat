@@ -1,5 +1,4 @@
 Require Import List.
-Require Import CpdtTactics.
 
 Fixpoint list_eqb {X : Type} (eqb : X -> X -> bool) (xs : list X) (ys : list X) : bool :=
   match xs, ys with
@@ -14,14 +13,10 @@ Lemma list_eqb_eq : forall {X : Type}, forall (eqb : X -> X -> bool),
 Proof.
   intros X eqb p l1.
   induction l1.
-  destruct l2.
-  crush.
-  crush.
+    destruct l2; intuition. inversion H. inversion H.
   intros l2.
-  destruct l2.
-  crush.
-  simpl.
-  split; intros H.
+  destruct l2; intuition.
+  inversion H. inversion H.
   assert (eqb a x = true /\ list_eqb eqb l1 l2 = true) as H0.
     apply andb_prop; assumption.
   destruct H0.
@@ -35,3 +30,9 @@ Proof.
   inversion H.
   split; reflexivity.
 Qed.
+
+Fixpoint mk_list {X : Type} (n : nat) (f : nat -> X) :=
+  match n with
+    | O => nil
+    | S n => f n :: mk_list n f
+  end.
