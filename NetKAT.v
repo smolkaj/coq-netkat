@@ -12,7 +12,6 @@ Require Import Equalities.
 Require Import Relations.
 Require Import Morphisms.
 
-
 Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   (** * Packets, Histories, and History Sets *)
@@ -86,6 +85,8 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   end.
 
   Notation "'[|' p '|]'" := (interpret p) (at level 1).
+
+
 
   (* Denotational equivalence. *)
   Definition equiv : relation policy := 

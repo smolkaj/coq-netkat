@@ -97,7 +97,7 @@ Lemma singleton_refl : forall x : X.t,
   singleton x x.
 Proof. unfold singleton. reflexivity. Qed.
 
-Hint Unfold singleton full.
+Hint Unfold singleton full empty.
 Hint Resolve union_empty_right union_empty_left union_idem singleton_refl.
 Hint Rewrite union_empty_right union_empty_left union_idem.
 
