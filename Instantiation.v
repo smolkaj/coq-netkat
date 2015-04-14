@@ -3,7 +3,7 @@
     different values, etc. *)
 
 Require Import Optimize.
-Require Import List.
+Require Import List Bool.
 Import ListNotations.
 
 
@@ -75,6 +75,15 @@ Module V : VALUESPEC(F).
       destruct (eq_dec f x y). assumption. inversion H.
     replace y. unfold eqb.
     case (eq_dec f x x); auto.
+  Qed.
+
+  Lemma eqb_dec : forall f : F.t, forall x y : t f,
+    {x=y} + {x<>y}.
+  Proof.
+    intros.
+    case (eqb f x y) eqn: eq; [cut (x=y) | cut(x<>y)]; intuition.
+    + apply eqb_eq. assumption.
+    + apply eqb_eq in H. rewrite eq in H. inversion H.
   Qed.
 
 End V.
