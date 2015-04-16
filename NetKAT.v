@@ -40,7 +40,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Notation "f == v" := (Filter f v) (at level 30, no associativity).
   Notation "f != v" := (NFilter f v) (at level 30, no associativity).
   Notation "p + q" := (Union p q) (at level 50, left associativity).
-  Notation "p ; q" := (Seq p q) (at level 40, left associativity).
+  Notation "p ;; q" := (Seq p q) (at level 40, left associativity).
   Notation "p *" := (Star p) (at level 31, left associativity).
   Notation "pk [ f := v ]" := (P.mod pk f v) (at level 10, no associativity).
 
@@ -76,7 +76,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
       HSet.singleton (pk[f:=v], h)
   | p+q, h =>
       HSet.union (interpret p h) (interpret q h)
-  | p;q, h =>
+  | p;;q, h =>
       kleisli (interpret p) (interpret q) h
   | p*, h =>
       fun h' => ex (fun n => power n (interpret p) h h')
@@ -127,36 +127,38 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     split; intros H0; (destruct H0; [left;apply H | right]); assumption.
   Qed.
    
-  Instance plus_equiv_proper_right (p : policy) :
-    Proper (equiv ==> equiv) (Union p).
-  Proof. intros q r H. apply plus_equiv_right; assumption. Qed.
+  Instance plus_equiv_proper :
+    Proper (equiv ==> equiv ==> equiv) Union.
+  Proof.
+    intros p p' Hp q q' Hq.
+    assert (p'+q === p'+q') by apply (plus_equiv_right p' q q' Hq).
+    assert (p+q === p'+q) by apply (plus_equiv_left p p' q Hp).
+    rewrite H0; rewrite H; reflexivity.
+  Qed.
 
-  Instance plus_equiv_proper_left (p : policy) :
-    Proper (equiv ==> equiv) (fun q => Union q p).
-  Proof. intros q r H. apply plus_equiv_left; assumption. Qed.
 
-
-  Lemma seq_equiv_right: forall p q r, q === r -> p ; q === p ; r.
+  Lemma seq_equiv_right: forall p q r, q === r -> p ;; q === p ;; r.
   Proof.
     intros p q r H h h'.
     split; intros H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
     apply H in H1; exists h''; auto.
   Qed.
 
-  Lemma seq_equiv_left: forall p q r, p === q -> p ; r === q ; r.
+  Lemma seq_equiv_left: forall p q r, p === q -> p ;; r === q ;; r.
   Proof.
     intros p q r H h h'.
     split; intros H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
     apply H in H0; exists h''; auto.
   Qed.
 
-  Instance seq_equiv_proper_right (p : policy) :
-    Proper (equiv ==> equiv) (Seq p).
-  Proof. intros q r H. apply seq_equiv_right; assumption. Qed.
-
-  Instance seq_equiv_proper_left (p : policy) :
-    Proper (equiv ==> equiv) (fun q => Seq q p).
-  Proof. intros q r H. apply seq_equiv_left; assumption. Qed.
+  Instance seq_equiv_proper :
+    Proper (equiv ==> equiv ==> equiv) Seq.
+  Proof. 
+    intros p p' Hp q q' Hq.
+    rewrite (seq_equiv_left _ _ q Hp).
+    rewrite (seq_equiv_right p' _ _ Hq).
+    reflexivity.
+  Qed.
 
  
   Lemma star_equiv: forall p q, p === q -> p* === q*.
@@ -279,14 +281,14 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     apply HSet.union_idem.
   Qed.
 
-  Theorem ka_seq_assoc : forall p q r : policy, (p;q);r === p;(q;r).
+  Theorem ka_seq_assoc : forall p q r : policy, (p;;q);;r === p;;(q;;r).
   Proof.
     intros p q r h.
     simpl.
     apply kleisli_assoc.
   Qed.
 
-  Theorem ka_one_seq : forall p : policy, Id; p === p.
+  Theorem ka_one_seq : forall p : policy, Id;; p === p.
   Proof.
     intros p h h'.
     split; intro H.
@@ -301,7 +303,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
       split. apply HSet.singleton_refl. apply H.
   Qed.
 
-  Theorem ka_seq_one : forall p : policy, p; Id === p.
+  Theorem ka_seq_one : forall p : policy, p;; Id === p.
   Proof.
     intros p h h'.
     split; intro H.
@@ -317,7 +319,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Qed.
 
   Theorem ka_seq_dist_l : forall p q r : policy,
-    p; (q + r) === p;q + (p; r).
+    p;; (q + r) === p;;q + (p;; r).
   Proof.
     intros p q r h h''.
     split; intro H.
@@ -331,7 +333,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Qed.
 
   Theorem ka_seq_dist_r : forall p q r : policy,
-    (p + q); r === p;r + q; r.
+    (p + q);; r === p;;r + q;; r.
   Proof.
     intros p q r h h''.
     split; intro H.
@@ -344,7 +346,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     apply HSet.union_mono_right; assumption.
   Qed.
 
-  Theorem ka_zero_seq : forall p : policy, Drop; p === Drop.
+  Theorem ka_zero_seq : forall p : policy, Drop;; p === Drop.
   Proof.
     intros p h h'.
     split; intros H.
@@ -353,7 +355,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     contradiction.
   Qed.
 
-  Theorem ka_seq_zero : forall p : policy, p; Drop === Drop.
+  Theorem ka_seq_zero : forall p : policy, p;; Drop === Drop.
   Proof.
     intros p h h'.
     split; intros H.
@@ -362,7 +364,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     contradiction.
   Qed.
 
-  Theorem ka_unroll_l : forall p : policy, Id + p;p* === p*.
+  Theorem ka_unroll_l : forall p : policy, Id + p;;p* === p*.
   Proof.
     intros p h h'.
     split; intros H.
@@ -393,7 +395,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     assumption.
   Qed.
 
-  Theorem ka_unroll_r : forall p : policy, Id + p*;p === p*.
+  Theorem ka_unroll_r : forall p : policy, Id + p*;;p === p*.
   Proof.
     intros p h h'.
     split; intros H.
@@ -424,7 +426,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     split; [exists n| ]; assumption.
   Qed.
 
-  Lemma ka_seq_mon_left: forall p q r, p <== q -> p;r <== q;r.
+  Lemma ka_seq_mon_left: forall p q r, p <== q -> p;;r <== q;;r.
   Proof.
     intros p q r H h h'.
     split; intros H0.
@@ -436,7 +438,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     apply HSet.union_mono_right; assumption.
   Qed.
 
-  Lemma ka_seq_mon_right: forall p q r, q <== r -> p;q <== p;r.
+  Lemma ka_seq_mon_right: forall p q r, q <== r -> p;;q <== p;;r.
   Proof.
     intros p q r H h h'.
     split; intros H0.
@@ -518,7 +520,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   (* Tactic that tries to rewrite using all "safe" rules and
      then discharges all trivial goals. *)
   Ltac netkat :=
-    try(simpl; reflexivity);
+    simpl; try reflexivity;
     repeat(
       repeat(rewrite -> ka_plus_zero);
       repeat(rewrite -> ka_zero_plus);
@@ -527,18 +529,20 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
       repeat(rewrite -> ka_zero_seq);
       repeat(rewrite -> ka_seq_one);
       repeat(rewrite -> ka_one_seq);
-      try(simpl; reflexivity)
+      simpl; try reflexivity
     ).
 
-  (* Tactic that does case splits on two policies and then tries
+  (* Tactic that does case splits on policies and then tries
      to solve goals using axiomatic rewriting *)
-  Ltac netkat_cases p q :=
-    case p; case q;
-    netkat;
-    try (intros f);
-    netkat;
-    try (intros v);
-    netkat.
+Ltac netkat_cases :=
+intros;
+(match goal with
+  | [ p:policy, q:policy, r:policy |- _ ] =>
+      destruct p; destruct q; destruct r
+  | [ p:policy, q:policy |- _ ] => destruct p; destruct q
+  | [ p:policy |- _ ] => destruct p
+  | _ => idtac
+end); netkat.
     
 
 

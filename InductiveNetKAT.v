@@ -2,6 +2,7 @@ Require Export NetKAT Misc.
 Require Import List Coq.Program.Equality Bool Omega.
 Require Import Relations Relations.Relation_Operators.
 Require Import Arith.Wf_nat.
+Import ListNotations.
 
 Ltac invert id := inversion id; try (subst); eauto.
 
@@ -17,7 +18,7 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
   | BstepMod : forall f v pk h, bstep (Mod f v) (pk,h) (pk[f:=v], h)
   | BstepPlusLeft : forall h h' p q, bstep p h h' -> bstep (p+q) h h'
   | BstepPlusRight : forall h h' p q, bstep q h h' -> bstep (p+q) h h'
-  | BstepSeq : forall h h' h'' p q, bstep p h h' -> bstep q h' h'' -> bstep (p;q) h h''
+  | BstepSeq : forall h h' h'' p q, bstep p h h' -> bstep q h' h'' -> bstep (p;;q) h h''
   | BstepStarRefl : forall h p, bstep (p*) h h
   | BstepStarTrans : forall h h' h'' p, bstep p h h' -> bstep (p*) h' h'' -> bstep (p*) h h''
   | BstepDup : forall pk h, bstep Dup (pk,h) (pk,pk::h).
@@ -83,13 +84,13 @@ Inductive sstep : prod policy H.t -> prod policy H.t -> Prop :=
 | sstep_Union_right :
     forall p q h, sstep (p+q, h) (q, h)
 | sstep_Seq_progress :
-    forall p q h r h', sstep (p, h) (r, h') -> sstep (p;q, h) (r;q, h')
+    forall p q h r h', sstep (p, h) (r, h') -> sstep (p;;q, h) (r;;q, h')
 | sstep_Seq_finish :
-    forall q h, sstep (Id;q, h) (q, h)
+    forall q h, sstep (Id;;q, h) (q, h)
 | sstep_Seq_fail :
-    forall q h, sstep (Drop;q, h) (Drop, h)
+    forall q h, sstep (Drop;;q, h) (Drop, h)
 | sstep_Star_unfold :
-    forall p h, sstep (p*,h) (p;p*, h)
+    forall p h, sstep (p*,h) (p;;p*, h)
 | sstep_Star_finish :
     forall p h, sstep (p*, h) (Id,h)
 | sstep_Dup :
@@ -104,17 +105,16 @@ Proof.
 Qed.
 
 Lemma sstep_progress :
-  forall p h, (p=Id) \/ (p=Drop) \/ (exists r h', sstep (p,h) (r,h')).
+  forall p, (p=Id) \/ (p=Drop) \/ (forall h, exists r h', sstep (p,h) (r,h')).
 Proof.
   intros.
-  induction p; first [auto;fail | right;right;destruct h as [pk h]]; eauto.
+  induction p; first [auto;fail | right;right;intro;destruct h as [pk h] ]; eauto.
   + destruct (V.eq_dec f (pk f) t); eauto.
   + destruct (V.eq_dec f (pk f) t); eauto.
-  + destruct IHp1; subst; eauto. destruct H; subst; eauto.
-    destruct H as [r]; destruct H as [h']; exists (r;p2); exists h'; eauto.
+  + dependent destruction IHp1; eauto; dependent destruction H; subst; eauto.
+    assert (H':= H (pk,h)); clear H.
+    destruct H' as [r]; destruct H as [h']; exists (r;;p2); exists h'; eauto.
 Qed.
-
-Check clos_trans.
 
 Inductive npower {A : Type} (R : relation A) : nat -> relation A :=
 | npower0 : forall x, npower R 0 x x
@@ -137,6 +137,7 @@ Qed.
 
 Definition ssteps := clos_refl_trans_1n (prod policy H.t) sstep.
 Hint Unfold ssteps.
+
 Lemma clos_rt1n_trans : forall X R x y z, clos_refl_trans_1n X R x y ->
   clos_refl_trans_1n X R y z -> clos_refl_trans_1n X R x z.
 Proof. intros.
@@ -159,7 +160,7 @@ Proof.
 Qed.
 
 Lemma ssteps_seq_assoc : forall p q r h1 h2,
-  ssteps (p;(q;r), h1) (r, h2) -> ssteps (p;q;r, h1) (r, h2).
+  ssteps (p;;(q;;r), h1) (r, h2) -> ssteps (p;;q;;r, h1) (r, h2).
 Proof.
   intros.
   unfold ssteps in H.
@@ -170,32 +171,32 @@ Proof.
   dependent induction n; intros; invert H.
   - admit.
   - invert H1; invert H2.
-    * admit.
+    * subst x n h'; clear IHn H H6 H1 H2. admit.
     * eright; eauto. apply IHn; eauto.
     * admit.
     * eright; eauto. apply clos_trans_refl_nat; eauto.
     * invert H0.  
 Qed.
 
-Lemma bstep_ssteps : forall p q h1 h2, bstep p h1 h2 -> ssteps (p;q,h1) (q,h2).
+Lemma bstep_ssteps : forall p q h1 h2, bstep p h1 h2 -> ssteps (p;;q,h1) (q,h2).
 Proof.
   intros. generalize dependent q.
   dependent induction H; intros; subst; eauto 7.
   + assert (H0 := IHbstep q0); eauto.
   + assert (H0 := IHbstep q0); eauto.
-  + assert (H1 := IHbstep1 (q;q0)); assert (H2 := IHbstep2 q0).
+  + assert (H1 := IHbstep1 (q;;q0)); assert (H2 := IHbstep2 q0).
     apply ssteps_seq_assoc. eauto using clos_rt1n_trans.
-  + clear H H0. assert (H0 := IHbstep1 (p*;q)); assert (H1 := IHbstep2 q).
+  + clear H H0. assert (H0 := IHbstep1 (p*;;q)); assert (H1 := IHbstep2 q).
     eright. apply sstep_Seq_progress. apply sstep_Star_unfold.
     apply ssteps_seq_assoc. eauto using clos_rt1n_trans.
 Qed.
 
 Lemma sstep_id_right : forall p h1 h2,
-  ssteps (p;Id, h1) (Id, h2) -> ssteps (p,h1) (Id,h2).
+  ssteps (p;;Id, h1) (Id, h2) -> ssteps (p,h1) (Id,h2).
 Proof.
   intros.
   apply clos_rt1n_rt in H; apply clos_rt_rtn1 in H.
-  invert H. destruct y as [q h3]. cut (q = Id;Id).
+  invert H. destruct y as [q h3]. cut (q = Id;;Id).
   + intro H2. subst q. apply clos_rtn1_rt in H1. apply clos_rt_rt1n in H1.
     apply clos_trans_refl_nat in H1.
     destruct H1 as [n].
@@ -245,7 +246,7 @@ Definition A p (h h' : H.t) :=
 Definition T p (h h' : H.t) q :=
   let (pk, h) := h in
   let (pk',_) := h' in
-  ssteps (p, (pk,h)) (Dup;q, (pk',h)).
+  ssteps (p, (pk,h)) (Dup;;q, (pk',h)).
 
 Hint Unfold A.
 Hint Unfold T.
@@ -253,7 +254,7 @@ Hint Unfold T.
 Fixpoint A' (p : policy) :=
 match p with
   | q+r => A' q + A' r
-  | q;r => A' q ; A' r
+  | q;;r => A' q ;; A' r
   | q* => (A' q)*
   | Dup => Drop
   | x => x 
@@ -264,14 +265,15 @@ Functional Scheme A'_ind := Induction for A' Sort Prop.
 Fixpoint T' (p : policy) :=
 match p with
   | q+r => T' q + T' r
-  | q;r => (A' q; T' r) + (T q; r)
-  | q* => (A' q)*; (T' q); q*
+  | q;;r => (A' q;; T' r) + (T' q;; r)
+  | q* => (A' q)*;; (T' q);; q*
   | Dup => Id
   | x => Drop
+end.
 
 Fixpoint subt_fn p q :=
 match q with
-  | r;s => p = q \/ subt_fn p r \/ subt_fn p s
+  | r;;s => p = q \/ subt_fn p r \/ subt_fn p s
   | r+s => p = q \/ subt_fn p r \/ subt_fn p s
   | r* => p = q \/ subt_fn p r
   | _ => p = q
@@ -282,8 +284,8 @@ Inductive subt p : policy -> Prop :=
   | subt_refl : subt p p
   | subt_plus_left : forall q r, subt p q -> subt p (q+r)
   | subt_plus_right : forall q r, subt p r -> subt p (q+r)
-  | subt_seq_left : forall q r, subt p q -> subt p (q;r)
-  | subt_seq_right : forall q r, subt p r -> subt p (q;r)
+  | subt_seq_left : forall q r, subt p q -> subt p (q;;r)
+  | subt_seq_right : forall q r, subt p r -> subt p (q;;r)
   | subt_star : forall q, subt p q -> subt p (q*).
 Hint Constructors subt.
 
@@ -361,32 +363,68 @@ Proof.
     eapply bstep_dup_free; eauto using A'_dup_free.
 Qed.
 
-Lemma A_A' : forall p h h', A p h h' -> [|(A' p)|] h h'.
+Import ListNotations.
+Record state : Type := mkState {
+  e : H.t -> H.t -> Prop;
+  d : H.t -> H.t -> nat -> Prop
+}.
+
+Check state.
+
+Record nfa : Type := {
+  states : list state 
+}.
+
+Set Implicit Arguments.
+Definition shift (n:nat) :=
+  map (fun s => {| e:= s.(e);  d:= (fun x y m => s.(d) x y (m-n)) |}).
+Hint Unfold shift.
+
+Check Is_true.
+
+Definition closed (a : list state) := 
+  forall s, In s a -> forall x y n, s.(d) x y n -> n < length a.
+Hint Unfold closed.
+
+Require Import FunctionalExtensionality.
+
+Lemma shift0 : forall a, shift 0 a = a.
 Proof.
-  intros.
-  assert (~ (subt Dup p)). eauto using A'_dup_free.
-  unfold A in H. 
-  destruct h as [pk h]; destruct h' as [pk' h'].
-  apply bstep_interpret. apply bstep_ssteps_iff in H.
-  generalize dependent h'; generalize dependent pk';
-  generalize dependent h; generalize dependent pk.
-  functional induction (A' p); intros.
-  try (dependent destruction H; eauto; fail).
-  + dependent destruction H. destruct h'0 as [pk'' h''].
-    eapply BstepSeq.
-    - eapply IHp0. apply H.
-    - eapply IHp1. apply bstep_ssteps_iff in H.
-      assert (h=h'') by eauto using A'_dup_free, ssteps_dup_free.
-      subst; eauto.
-  + assert (bstep (A' (q *)) (pk, h) (pk', h')) by (simpl; assumption).
-    assert (h=h') by eauto using A'_dup_free, bstep_dup_free.
-    subst h'; clear H0.
-    dependent induction H; eauto. destruct h' as [pk'' h'].
-    eapply BstepStarTrans. eapply IHp0; eauto.
-    eapply IHbstep2; eauto.
-    replace h' with h. reflexivity.
-    eapply bstep_dup_free; eauto using A'_dup_free.
+ intros.
+ induction a; auto.
+ simpl. rewrite IHa. f_equal.
+ destruct a; f_equal; simpl.
+ extensionality x; extensionality y; extensionality m.
+ intuition.
 Qed.
 
+Hint Rewrite shift0.
+Hint Resolve shift0.
+
+Definition dummy := {| e := fun _ _ => False; d := fun _ _ _ => False |}.
+Hint Unfold dummy.
+
+
+Lemma cons_dummy : forall a, closed a -> closed(dummy :: shift 1 a).
+Proof.
+  intros.
+  unfold closed.
+  intros. invert H0.
+  + inversion H1.
+  + unfold shift in H2. rewrite in_map_iff in H2.
+    destruct H2 as [s']. destruct H2. rewrite <- H2 in H1; simpl in H1.
+    cut (n < length a). simpl.
+    admit. admit.
+Qed.
+
+Fixpoint automatize (p : policy) : list state :=
+match p with
+  | Dup => 
+      [ mkState (bstep Drop) (fun x y n => x=y /\ n=1) ;
+        mkState (bstep Id)   (fun _ _ _ => False) ]
+  | x => [ mkState (bstep x) (fun _ _ _ => False) ]
+end.
+
+Functional Scheme automatize_ind := Induction for automatize Sort Prop.
 
 End NetKAT'.

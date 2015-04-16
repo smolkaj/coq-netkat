@@ -45,11 +45,16 @@ Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) : PACKET(F)(V).
 
   Include Make_UDTF(Skeleton).
 
+  Program Definition mod (pk : t) (f : F.t) (v : V.t f) : t :=
+    fun f' => if F.eq_dec f' f then v else pk f'.
+ 
+  (* old definition from the days before I heard about "Program" **
   Definition mod (pk : t) (f : F.t) (v : V.t f) : t :=
     fun f' =>
       match F.eq_dec f' f with
       | left e => eq_rec_r V.t v e
       | right ne => pk f'
       end.
+  *)
 
 End Packet.
