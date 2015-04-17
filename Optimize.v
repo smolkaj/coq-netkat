@@ -68,7 +68,7 @@ Qed.
 Lemma mk_star_sound: forall p : policy, mk_star p === p*.
 Proof.
   netkat_cases;
-  [rewrite star_zero | rewrite star_one];
+  [rewrite star_zero | rewrite star_one].
   simpl; reflexivity.
 Qed.
 

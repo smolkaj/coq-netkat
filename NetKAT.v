@@ -519,6 +519,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   (* Tactic that tries to rewrite using all "safe" rules and
      then discharges all trivial goals. *)
+  (* TODO: use autorewrite instead *)
   Ltac netkat :=
     simpl; try reflexivity;
     repeat(
