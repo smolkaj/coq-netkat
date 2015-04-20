@@ -227,6 +227,24 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     apply power_slide.
   Qed.
 
+  Lemma power_decompose n m f h h':
+    power (m+n) f h h' <-> exists h'', power m f h h'' /\ power n f h'' h'.
+  Proof.
+    split; intro H; generalize dependent h; generalize dependent h';
+    generalize dependent n; induction m; intros; simpl in *.
+    - exists h. intuition.
+    - destruct H as [h'' [H0 H1]].
+      assert (H2 := IHm _ _ _ H1).
+      destruct H2 as [h''' [H2 H3]].
+      exists h'''; intuition simpl.
+      exists h''; intuition.
+    - destruct H as [h'' [H0 H1]]. congruence.
+    - destruct H as [h'' [H0 H2]].
+      destruct H0 as [h''' [H0 H1]].
+      exists h'''; intuition.
+      apply IHm. exists h''. intuition.
+    Qed.
+
   (* NetKAT axioms and useful corollaries *)
   Theorem ka_plus_assoc : forall p q r : policy, (p+q)+r === p+(q+r).
   Proof.

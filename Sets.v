@@ -91,11 +91,11 @@ Qed.
 
 Lemma singleton_iff : forall x y: X.t,
   singleton x y <-> x=y.
-Proof. unfold singleton. reflexivity. Qed.
+Proof. intuition. Qed.
 
 Lemma singleton_refl : forall x : X.t,
   singleton x x.
-Proof. unfold singleton. reflexivity. Qed.
+Proof. intuition. Qed.
 
 Global Hint Unfold singleton full empty.
 Global Hint Resolve union_empty_right union_empty_left union_idem singleton_refl.

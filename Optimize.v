@@ -20,10 +20,11 @@ Definition mk_seq (p1 p2 : policy) :=
     | _, _ => p1;; p2
   end.
 
-Definition mk_star (p : policy) :=
+Fixpoint mk_star (p : policy) :=
   match p with
     | Drop
     | Id => Id
+    | q* => mk_star q 
     | _ => p*
   end.
 
@@ -65,13 +66,34 @@ Proof.
 Qed.
 Hint Rewrite star_one : netkat.
 
-Lemma mk_star_sound: forall p : policy, mk_star p === p*.
-Proof. netkat_cases. Qed.
+Lemma star_star p: p * * === p*.
+Proof.
+  intro h. split; intro H;
+  destruct H as [n H]; generalize dependent x; generalize dependent h;
+  induction n; intros.
+  - exists 0. auto.
+  - repeat destruct H.
+    assert ([|p*|] x0 x) by eauto.
+    destruct H1 as [m H1].
+    exists ((x1 + m)%nat).
+    apply power_decompose.
+    exists x0; intuition.
+  - exists 0. auto.
+  - simpl in H. destruct H as [h'' [H0 H1]].
+    assert (H2 := IHn _ _ H1); clear IHn H1 n.
+    destruct H2 as [n]. exists (S n). simpl. exists h''.
+    intuition. exists 1. simpl. exists h''; auto.
+Qed.
+Hint Rewrite star_star : netkat.
+  
+
+Lemma mk_star_sound p: mk_star p === p*.
+Proof. netkat_induction p. Qed.
 
 Hint Rewrite mk_union_sound mk_seq_sound mk_star_sound : netkat.
 
-Theorem optimize_sound: forall p : policy, optimize p === p.
-Proof. intros p; netkat_induction p. Qed.
+Theorem optimize_sound p: optimize p === p.
+Proof. netkat_induction p. Qed.
 
 
 End Optimize.
