@@ -513,25 +513,16 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     
 
   (** * Tactics for automated axiomatic reasoning *)
-  
+  Create HintDb netkat.
   Hint Rewrite ka_plus_assoc ka_plus_zero ka_zero_plus ka_plus_idem
-    ka_seq_assoc ka_one_seq ka_seq_one ka_zero_seq ka_zero_plus ka_seq_zero.
+    ka_seq_assoc ka_one_seq ka_seq_one ka_zero_seq ka_zero_plus
+    ka_seq_zero : netkat.
 
   (* Tactic that tries to rewrite using all "safe" rules and
      then discharges all trivial goals. *)
-  (* TODO: use autorewrite instead *)
   Ltac netkat :=
     simpl; try reflexivity;
-    repeat(
-      repeat(rewrite -> ka_plus_zero);
-      repeat(rewrite -> ka_zero_plus);
-      repeat(rewrite -> ka_plus_idem);
-      repeat(rewrite -> ka_seq_zero);
-      repeat(rewrite -> ka_zero_seq);
-      repeat(rewrite -> ka_seq_one);
-      repeat(rewrite -> ka_one_seq);
-      simpl; try reflexivity
-    ).
+    autorewrite with netkat using (simpl; try reflexivity).
 
   (* Tactic that does case splits on policies and then tries
      to solve goals using axiomatic rewriting *)
@@ -544,6 +535,12 @@ intros;
   | [ p:policy |- _ ] => destruct p
   | _ => idtac
 end); netkat.
+
+Ltac netkat_induction id :=
+  induction id; netkat;
+  repeat (match goal with
+    | [H: _ === _ |- _] => first [rewrite -> H | rewrite <- H]; clear H
+  end); netkat.
     
 
 

@@ -45,6 +45,7 @@ Proof. netkat_cases. Qed.
 
 Lemma star_zero: Drop* === Id.
 Proof. rewrite <- ka_unroll_l. netkat. Qed.
+Hint Rewrite star_zero : netkat.
 
 Lemma star_one_aux: forall n h, HSet.eq (power n [|Id|] h) ([|Id|] h).
 Proof.
@@ -64,20 +65,15 @@ Proof.
   apply (star_one_aux n h). assumption.
   exists 0. simpl. apply H.
 Qed.
+Hint Rewrite star_one : netkat.
 
 Lemma mk_star_sound: forall p : policy, mk_star p === p*.
-Proof.
-  netkat_cases;
-  [rewrite star_zero | rewrite star_one].
-  simpl; reflexivity.
-Qed.
+Proof. netkat_cases. Qed.
+
+Hint Rewrite mk_union_sound mk_seq_sound mk_star_sound : netkat.
 
 Theorem optimize_sound: forall p : policy, optimize p === p.
-Proof.
-  intros p.
-  induction p; netkat;
-  [rewrite mk_union_sound | rewrite mk_seq_sound | rewrite mk_star_sound];
-  try (rewrite IHp1; rewrite IHp2); reflexivity.
-Qed.
+Proof. intros p; netkat_induction p. Qed.
+
 
 End Optimize.
