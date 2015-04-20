@@ -49,12 +49,10 @@ Hint Rewrite star_zero : netkat.
 
 Lemma star_one_aux: forall n h, HSet.eq (power n [|Id|] h) ([|Id|] h).
 Proof.
-  induction n; intros h h'.
-    intuition.
-  split; intros H.
-    simpl in H. destruct H as [h'']. destruct H as [H0 H1].
-    unfold HSet.singleton in H0. subst h''. apply IHn in H1. assumption.
-  simpl. exists h. intuition. apply IHn. assumption.
+  induction n; intros h h'; intuition.
+  simpl in H. destruct H as [h'' [H0 H1]].
+  + apply IHn in H1. congruence.
+  + simpl. exists (a,b). intuition. apply IHn. assumption.
 Qed.
 
 Lemma star_one: Id* === Id.

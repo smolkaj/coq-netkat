@@ -140,14 +140,14 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Lemma seq_equiv_right: forall p q r, q === r -> p ;; q === p ;; r.
   Proof.
     intros p q r H h h'.
-    split; intros H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
+    split; intros H0; destruct H0 as [h'' [H0 H1]];
     apply H in H1; exists h''; auto.
   Qed.
 
   Lemma seq_equiv_left: forall p q r, p === q -> p ;; r === q ;; r.
   Proof.
     intros p q r H h h'.
-    split; intros H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
+    split; intros H0; destruct H0 as [h'' [H0 H1]];
     apply H in H0; exists h''; auto.
   Qed.
 
@@ -168,7 +168,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
       (intros H0; destruct H0 as [n]; exists n;
        generalize dependent h';  generalize dependent h;
        induction n; intuition);
-      simpl in H0; destruct H0 as [h'']; destruct H0 as [H0 H1];
+      simpl in H0; destruct H0 as [h'' [H0 H1]];
       apply H in H0; simpl; exists h''; split; try(apply IHn); assumption.
   Qed.
 
@@ -185,44 +185,26 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     HSet.eq (kleisli (kleisli p q) r h) (kleisli p (kleisli q r) h).
   Proof.
     intros p q r h0.
-    unfold HSet.eq.
     intros h1.
-    split; intros H; destruct H as [h']; destruct H as [H1 H2].
-      destruct H1 as [h''].
-      destruct H as [H0 H1].
-      eapply ex_intro.
-      split.
-        apply H0.
-      eapply ex_intro.
-        split. apply H1. apply H2.
-    destruct H2 as [h''].
-      destruct H as [H2 H3].
-      repeat (eapply ex_intro; split).
-      apply H1. apply H2. apply H3.
-   Qed.
+    split; intros H; destruct H as [h' [H1 H2]];
+    [destruct H1 as [h'' [H0 H1]] | destruct H2 as [h'' [H2 H3]]];
+    repeat (eapply ex_intro; intuition eauto).
+  Qed.
 
   Lemma kleisli_right_id: forall p h, HSet.eq (p h) (kleisli p HSet.singleton h).
   Proof.
     intros p h h'.
     split; intros H.
-      exists h'.
-      auto.
-    destruct H as [h'']. destruct H as  [H0 H1].
-    unfold HSet.singleton in H1.
-    subst h''.
-    assumption.
+    + exists h'; auto.
+    + destruct H as [h'' [H0 H1]]. congruence.
   Qed.
 
   Lemma kleisli_left_id: forall p h, HSet.eq (p h) (kleisli HSet.singleton p h).
   Proof.
     intros p h h'.
     split; intros H.
-      exists h.
-      auto.
-    destruct H as [h'']. destruct H as  [H0 H1].
-    unfold HSet.singleton in H0.
-    subst h''.
-    assumption.
+    + exists h; auto.
+    + destruct H as [h'' [H0 H1]]. congruence.
   Qed.
 
   Lemma power_slide: forall n f h, 
@@ -230,15 +212,13 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Proof.
     intros n.
     induction n; intros f h.
-    simpl. unfold HSet.singleton. unfold kleisli. split; intros H.
-      destruct H as [h'']; destruct H as [H0 H1]. subst h''. exists h. auto.
-      destruct H as [h'']; destruct H as [H0 H1]. subst h''. exists x. auto.
-    assert (HSet.eq (kleisli f (power (S n) f) h) (kleisli (kleisli f (power n f)) f h)).
-      rewrite -> kleisli_assoc.
-      intros h'.
-      split; intros H; destruct H as [h'']; destruct H as [H0 H1];
+    + simpl. unfold kleisli. split; intros H; destruct H as [h'' [H0 H1]].
+      - exists h. intuition congruence.
+      - exists x. intuition congruence.
+    + cut (HSet.eq (kleisli f (power (S n) f) h) (kleisli (kleisli f (power n f)) f h)); auto.
+      rewrite -> kleisli_assoc. intros h'.
+      split; intros H; destruct H as [h'' [H0 H1]];
       exists h''; split; try(apply IHn); assumption.
-    auto.
   Qed.
 
   Corollary power_slide': forall n f h, 
@@ -292,30 +272,16 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Proof.
     intros p h h'.
     split; intro H.
-      destruct H as [h''].
-      destruct H as [H0 H1].
-      simpl in H0.
-      unfold HSet.singleton in H0.
-      subst h''.
-      assumption.
-    simpl.
-      eapply ex_intro.
-      split. apply HSet.singleton_refl. apply H.
+    + destruct H as [h''[H0 H1]]. simpl in H0. congruence.
+    + simpl. eapply ex_intro; eauto.
   Qed.
 
   Theorem ka_seq_one : forall p : policy, p;; Id === p.
   Proof.
     intros p h h'.
     split; intro H.
-      destruct H as [h''].
-      destruct H as [H0 H1].
-      simpl in H1.
-      unfold HSet.singleton in H1.
-      subst h''.
-      assumption.
-    simpl.
-      eapply ex_intro.
-      split. apply H. apply HSet.singleton_refl.
+    + destruct H as [h''[H0 H1]]. simpl in H1. congruence.
+    + simpl. eapply ex_intro; eauto.
   Qed.
 
   Theorem ka_seq_dist_l : forall p q r : policy,
@@ -323,13 +289,10 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Proof.
     intros p q r h h''.
     split; intro H.
-      destruct H as [h'].
-      destruct H as [H0 H1].
-      destruct H1 as [H1|H1]; [left | right]; exists h'; auto.
-    destruct H as [H|H]; destruct H as [h']; destruct H as [H1 H2];
-    exists h';split; try (apply H1).
-    apply HSet.union_mono_left; assumption.
-    apply HSet.union_mono_right; assumption.
+    + destruct H as [h' [H0 [H1|H1]]]; [left | right]; exists h'; auto.
+    + repeat destruct H; exists x; intuition eauto.
+      - apply HSet.union_mono_left; assumption.
+      - apply HSet.union_mono_right; assumption.
   Qed.
 
   Theorem ka_seq_dist_r : forall p q r : policy,
@@ -337,139 +300,85 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Proof.
     intros p q r h h''.
     split; intro H.
-      destruct H as [h'].
-      destruct H as [H1 H0].
-      destruct H1 as [H1|H1]; [left | right]; exists h'; auto.
-    destruct H as [H|H]; destruct H as [h']; destruct H as [H1 H2];
-    exists h'; split; try assumption.
-    apply HSet.union_mono_left; assumption.
-    apply HSet.union_mono_right; assumption.
+    + destruct H as [h' [[H1|H1] H0]]; [left | right]; exists h'; auto.
+    + repeat destruct H; exists x; intuition eauto.
+      - apply HSet.union_mono_left; assumption.
+      - apply HSet.union_mono_right; assumption.
   Qed.
 
   Theorem ka_zero_seq : forall p : policy, Drop;; p === Drop.
   Proof.
     intros p h h'.
-    split; intros H.
-      destruct H as [h'']. destruct H as [contr _].
-      contradiction.
-    contradiction.
+    split; intros H; repeat destruct H; eauto.
   Qed.
 
   Theorem ka_seq_zero : forall p : policy, p;; Drop === Drop.
   Proof.
     intros p h h'.
-    split; intros H.
-      destruct H as [h'']. destruct H as [_ contr].
-      contradiction.
-    contradiction.
+    split; intros H; repeat destruct H; eauto.
   Qed.
 
   Theorem ka_unroll_l : forall p : policy, Id + p;;p* === p*.
   Proof.
     intros p h h'.
-    split; intros H.
-      destruct H as [H|H].
-        simpl in H.
-        unfold HSet.singleton in H.
-        subst h'.
-        exists 0.
-        simpl.
-        unfold HSet.singleton; reflexivity.
-      destruct H as [h'']. destruct H as [H0 H1].
-        destruct H1 as [n].
-        exists (S n).
-        simpl.
-        exists h''.
-        auto.
-    destruct H as [n].
-    destruct n; simpl in H.
-      unfold HSet.singleton in H.
-      subst h'.
-      left.
-      simpl; auto.
-    right.
-    destruct H as [h'']. destruct H as [H0 H1].
-    exists h''.
-    split; try assumption.
-    exists n.
-    assumption.
+    split; intros H; repeat destruct H.
+    + exists 0. congruence.
+    + destruct H0 as [n H0]. exists (S n).
+      simpl. exists x. auto.
+    + destruct x; simpl in H; [left|right].
+      - congruence.
+      - repeat destruct H. exists x0. intuition eauto.
+        exists x. assumption.
   Qed.
 
   Theorem ka_unroll_r : forall p : policy, Id + p*;;p === p*.
   Proof.
     intros p h h'.
-    split; intros H.
-      destruct H as [H|H].
-        simpl in H.
-        unfold HSet.singleton in H.
-        subst h'.
-        exists 0.
-        simpl.
-        unfold HSet.singleton; reflexivity.
-      destruct H as [h'']. destruct H as [H0 H1].
-        destruct H0 as [n].
-        exists (S n).
-        simpl.
-        apply power_slide.
-        exists h''.
-        auto.
-    destruct H as [n].
-    destruct n; simpl in H.
-      unfold HSet.singleton in H.
-      subst h'.
-      left.
-      simpl; auto.
-    right.
-    apply (power_slide' n [|p|] h) in H.
-    destruct H as [h'']. destruct H as [H0 H1].
-    exists h''.
-    split; [exists n| ]; assumption.
+    split; intros H; repeat destruct H.
+    + exists 0. congruence.
+    + exists (S x0).
+      simpl. apply power_slide. exists x. auto.
+    + destruct x; simpl in H; [left|right].
+      - congruence.
+      - apply power_slide' in H.
+        repeat destruct H. exists x0. intuition eauto.
+        exists x. assumption.
   Qed.
 
   Lemma ka_seq_mon_left: forall p q r, p <== q -> p;;r <== q;;r.
   Proof.
     intros p q r H h h'.
     split; intros H0.
-      destruct H0.
-        destruct H0 as [h'']. destruct H0 as [H0 H1]. exists h''. split. 
-          apply H. apply HSet.union_mono_left; assumption.
-        assumption.
-      assumption.
-    apply HSet.union_mono_right; assumption.
+    + repeat destruct H0; exists x; intuition.
+      apply H. left. assumption.
+    + right. assumption.
   Qed.
 
   Lemma ka_seq_mon_right: forall p q r, q <== r -> p;;q <== p;;r.
   Proof.
     intros p q r H h h'.
     split; intros H0.
-      destruct H0.
-        destruct H0 as [h'']. destruct H0 as [H0 H1]. exists h''. split.
-          assumption.
-        apply H. apply HSet.union_mono_left; assumption.
-      assumption.
-    apply HSet.union_mono_right; assumption.
+    + repeat destruct H0; exists x; intuition.
+      apply H. left. assumption.
+    + right; assumption.
   Qed.
 
   Lemma ka_plus_mon_left: forall p q r, p<==q -> p + r <== q + r.
   Proof.
     intros p q r H h h'.
     split; intros H0.
-      destruct H0. destruct H0.
-        left. apply H. left. assumption.
-        right. assumption.
-        assumption.
-    right. assumption.
+    + destruct H0 as [[H0|H0]|[H0|H0]]; [left|right|left|right]; auto.
+      apply H; left; assumption.
+    + right; assumption.
   Qed.
 
   Lemma ka_plus_mon_right: forall p q r, q<==r -> p + q <== p + r.
   Proof.
     intros p q r H h h'.
     split; intros H0.
-      destruct H0. destruct H0.
-        left. assumption.
-        right. apply H. left. assumption.
-        assumption.
-    right. assumption.
+    + destruct H0 as [[H0|H0]|[H0|H0]]; [left|right|left|right]; auto.
+      apply H; left; assumption.
+    + right; assumption.
   Qed.
 
   Lemma ka_plus_leq: forall p q r, (p + q <== r) <-> (p <== r /\ q <== r).
