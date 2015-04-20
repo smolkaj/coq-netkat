@@ -1,18 +1,32 @@
 Require Import List Bool Arith.
 Import ListNotations.
 Require Import Relations Morphisms.
-Require Import Omega.
+Require Import Omega FunctionalExtensionality.
+Require Import Misc.
 
 Generalizable Variables X Y.
 
+
+
+
+Section Equality_Type.
+
 Class eqType (X : Type) : Type := eq_dec : forall x y : X, {x=y} + {x<>y}.
+
+Definition eqb `{eqType X} (x y : X) := if eq_dec x y then true else false.
+
+Theorem eqb_eq `{eqType X} (x y : X) : eqb x y = true <-> x=y.
+Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
+
+Theorem eqb_eq_false `{eqType X} (x y : X) : eqb x y = false <-> x<>y.
+Proof. unfold eqb. destruct (eq_dec x y); intuition. Qed.
+
+Hint Resolve eqb_eq eqb_eq_false.
 
 Instance : eqType bool := bool_dec.
 Instance : eqType nat := eq_nat_dec.
-Instance : eqType True.
-Proof. intros x y. destruct x; destruct y; auto. Qed.
-Instance : eqType False.
-Proof. intros x; destruct x. Qed.
+Program Instance : eqType True := fun x y => match x,y with I,I => left _ end. 
+Program Instance : eqType False := fun x y => match x,y with end.
 
 Program Instance sum_eqType `(eqType X) `(eqType Y) : eqType(X+Y) := fun a b =>
 match a, b with
@@ -32,19 +46,34 @@ match a,b with
   end
 end.
 
-Eval compute in if eq_dec ((4,3)) ((2,3)) then true else false.
+Program Instance list_eqType `(eqType X) : eqType(list X) := fix f xs ys :=
+match xs, ys with
+  | nil, nil => left _
+  | nil,cons _ _ | cons _ _,nil => right _
+  | cons x xs, cons y ys =>
+    match eq_dec x y with
+      | left _ => match f xs ys with left _ => left _ | right _ => right _ end
+      | right _ => right _
+    end
+end.
 
-Instance prod_eqType `(eqType X) `(eqType Y) : eqType(X*Y).
+Eval compute in eqb 
+  [(1,true);(2,false);(3,true)]
+  [(1,true);(2,false);(3,true)].
+
+End Equality_Type.
+
+
+
+
 
 
 Section Finite.
 
-Class Finite (X : Type) `{eqType X} : Type := enum : {xs: list X|forall x, In x xs}.
-Check Finite.
+Class Finite (X : Type) : Type := enum : {xs: list X|forall x, In x xs}.
 
-Check @enum.
-Check Finite.
-
+Definition enum' X `{Finite X} := proj1_sig enum.
+Hint Unfold enum'.
 
 Program Instance : Finite bool := [true;false].
 Next Obligation. destruct x; intuition. Qed.
@@ -97,16 +126,45 @@ Qed.
 End Finite_Of_List.
 
 
+End Finite.
+
+
+
 
 
 
 Section Finite_Functions.
 
-Lemma 
+Definition eq_dec_f `{Finite X} `{eqType (list Y)} (f g : X->Y) :=
+  eq_dec (map f (enum' X)) (map g (enum' X)).
+
+Program Instance fun_eqType `(Finite X) `(p:eqType Y) : eqType (X->Y) := fun f g =>
+  if @eq_dec_f X _ Y (list_eqType p) f g then left _ else right _.
+Next Obligation.
+  extensionality x.
+  assert(In x (enum' X)) by (unfold enum'; destruct enum; auto).
+  induction enum'; simpl in *; inversion H0; clear H0; intuition. 
+  subst a; assumption.
+Qed.
+Next Obligation. intro eq; subst; apply H0; reflexivity. Qed.
+
+Definition functs' `(Finite X) `(Finite Y) : list (X->Y) := (fix loop ys :=
+match ys with
+  | [] => []
+  | y::ys => (fun _ => y) :: (loop ys)
+end) (enum' Y).
+
+Fixpoint functs `(px:Finite X) `{_:eqType X} `(py:Finite Y) : list (X->Y) := 
+(fix loop xs :=
+  match xs with
+    | [] => functs' px py
+    | x::xs => flat_map (fun f => map (fun y x' => if eq_dec x x' then y else f x') (enum' Y))
+       (loop xs)
+  end) (enum' X).
+
+Instance fun_finite `(Finite X) `(Finite Y) : Finite(X->Y) := fun f g =>
 
 
-Program Instance fun_finite `(p1:Finite X) `(p2:Finite Y) : Finite(X->Y) :=
- fold_right list_prod (map (list_prod (@enum Y p2)) (@enum X p1)) [].
 
 End Finite_Functions.
 

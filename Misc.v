@@ -31,13 +31,13 @@ Proof.
   split; reflexivity.
 Qed.
 
-Lemma list_eq_dec {X} (eq : forall x y:X, {x=y}+{x<>y}) (xs ys : list X) :
+Lemma list_eq_dec {X} (eq_dec : forall x y:X, {x=y}+{x<>y}) (xs ys : list X) :
   {xs=ys}+{xs<>ys}.
 Proof.
-  pose (eqb := fun x y => if eq x y then true else false).
+  pose (eqb := fun x y => if eq_dec x y then true else false).
   assert (forall x y, eqb x y = true <-> x = y).
   + intros. subst eqb. split; intro H;
-    simpl in H; destruct (eq x y); auto; inversion H.
+    simpl in H; destruct (eq_dec x y); auto; inversion H.
   + assert (H' := list_eqb_eq eqb H xs ys).
     destruct (list_eqb eqb xs ys); [left|right]; intuition.
 Qed.
