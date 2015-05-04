@@ -29,11 +29,10 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Lemma bstep_interpret : forall p h h', bstep p h h' -> interpret p h h'.
   Proof.
-    intros p h h' H.
+    intros.
     induction H; simpl; try (simpl in H); auto.
     - rewrite <- V.eqb_eq in H.
-      rewrite -> H.
-      unfold HSet.singleton; reflexivity.
+      rewrite -> H. auto.
     - rewrite <- V.eqb_eq in H.
       rewrite if_negb.
       case (V.eqb f (pk f) v) eqn:H'; eauto.
@@ -52,7 +51,7 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
     simpl in H; try (unfold HSet.empty in H); try (unfold HSet.singleton in H);
     try (subst h'; constructor); intuition.
     - case (V.eqb f (pk f) t) eqn: H'; intuition.
-      + rewrite V.eqb_eq in H'. subst h'. auto.
+      rewrite V.eqb_eq in H'. subst h'. auto.
     - case (V.eqb f (pk f) t) eqn: H'; simpl in H; intuition.
       + subst h'. constructor. simpl. rewrite <- V.eqb_eq. intuition. congruence.
     - destruct H; [apply BstepPlusLeft|apply BstepPlusRight]; intuition.

@@ -1,5 +1,6 @@
 Require Import List.
 
+
 Fixpoint list_eqb {X : Type} (eqb : X -> X -> bool) (xs : list X) (ys : list X) : bool :=
   match xs, ys with
   | nil, nil => true
@@ -12,23 +13,15 @@ Lemma list_eqb_eq : forall {X : Type}, forall (eqb : X -> X -> bool),
   forall l1 l2 : list X, list_eqb eqb l1 l2 = true <-> l1 = l2.
 Proof.
   intros X eqb p l1.
-  induction l1.
-    destruct l2; intuition. inversion H. inversion H.
-  intros l2.
-  destruct l2; intuition.
-  inversion H. inversion H.
-  assert (eqb a x = true /\ list_eqb eqb l1 l2 = true) as H0.
-    apply andb_prop; assumption.
-  destruct H0.
-  rewrite -> (p a x) in H0.
-  rewrite -> (IHl1 l2) in H1.
-  subst a l1.
-  reflexivity.
-  apply andb_true_intro.
-  rewrite -> (p a x).
-  rewrite -> (IHl1 l2).
-  inversion H.
-  split; reflexivity.
+  induction l1; intros; destruct l2; intuition; try solve [inversion H].
+  + assert (eqb a x = true /\ list_eqb eqb l1 l2 = true) by auto using
+    andb_prop.
+    destruct H0. apply p in H0. apply IHl1 in H1.
+    congruence.
+  + inversion H; subst; simpl. 
+    apply andb_true_intro; split.
+    - apply p. reflexivity.
+    - apply IHl1. reflexivity.
 Qed.
 
 Lemma list_eq_dec {X} (eq_dec : forall x y:X, {x=y}+{x<>y}) (xs ys : list X) :

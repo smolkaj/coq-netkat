@@ -144,6 +144,8 @@ Next Obligation.
 Defined.
 Next Obligation. intro eq; apply H1; congruence. Defined.
 
+(*
+
 Definition functs `(Finite X) `(Finite Y) `{EqType X} : list(X->Y) :=
   fold_left 
     (fun fs x => flat_map (fun f => 
@@ -164,7 +166,7 @@ Next Obligation.
   functional induction
   assert(xs := enum' X).
   induction (xs).
-
+*)
 
 
 End Finite_Functions.

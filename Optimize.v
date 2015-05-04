@@ -32,7 +32,7 @@ Fixpoint optimize (p : policy) :=
   match p with
     | p1 + p2 => mk_union (optimize p1) (optimize p2)
     | p1;; p2 => mk_seq (optimize p1) (optimize p2)
-    | p0* => mk_star p0
+    | p0* => mk_star (optimize p0)
     | _ => p
   end.
 

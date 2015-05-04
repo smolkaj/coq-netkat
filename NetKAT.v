@@ -464,10 +464,15 @@ intros;
 end); netkat.
 
 Ltac netkat_induction id :=
-  induction id; netkat;
-  repeat (match goal with
-    | [H: _ === _ |- _] => first [rewrite -> H | rewrite <- H]; clear H
-  end); netkat.
+  induction id as [ | | | | | p1 IH1 p2 IH2 | p1 IH1 p2 IH2 | p0 IH | ];
+  netkat;
+  match goal with
+    | [IH1: _ === _, IH2: _ === _ |- _ ] => 
+        first [rewrite -> IH1; rewrite <- IH1];
+        first [rewrite -> IH2; rewrite <- IH2]
+    | [IH: _ === _ |- _] => first [rewrite -> IH | rewrite <- IH]
+  end;
+  netkat.
     
 
 
