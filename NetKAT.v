@@ -1,23 +1,15 @@
-Require Import Misc.
-Require Export Field.
-Require Export Value.
-Require Export Packet.
-Require Export History.
-Require Import List.
+Require Import List Bool.
 Import ListNotations.
-Require Export Sets.
-Require Import FunctionalExtensionality.
-Require Import Bool.
-Require Import Equalities.
-Require Import Relations.
-Require Import Morphisms.
+Require Import Relations Morphisms Equalities .
+Require Export Misc Field Value Packet History Sets.
 
 Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   (** * Packets, Histories, and History Sets *)
   Module P := Packet.Packet(F)(V).
   Module H := History.History(F)(V)(P).
-  Module HSet := set(H).
+
+  Implicit Type h : H.t.
   
 
   (** * NetKAT Syntax.
@@ -28,69 +20,71 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Inductive policy : Set :=
     | Drop : policy
     | Id : policy
-    | Filter  : forall (f : F.t), V.t f -> policy
-    | NFilter : forall (f : F.t), V.t f -> policy
+    | Filter  : forall f, V.t f -> policy
+    | NFilter : forall f, V.t f -> policy
     | Mod : forall (f : F.t), V.t f -> policy
     | Union   : policy -> policy -> policy
     | Seq     : policy -> policy -> policy
     | Star    : policy -> policy
     | Dup     : policy.
 
-  Notation "f <- v" := (Mod f v) (at level 30, no associativity).
-  Notation "f == v" := (Filter f v) (at level 30, no associativity).
-  Notation "f != v" := (NFilter f v) (at level 30, no associativity).
-  Notation "p + q" := (Union p q) (at level 50, left associativity).
-  Notation "p ;; q" := (Seq p q) (at level 40, left associativity).
-  Notation "p *" := (Star p) (at level 31, left associativity).
-  Notation "pk [ f := v ]" := (P.mod pk f v) (at level 10, no associativity).
+  Implicit Type p q r : policy.
 
+  Notation "f <- v" := (Mod f v) (at level 30, no associativity) : netkat_scope.
+  Notation "f == v" := (Filter f v) (at level 30, no associativity) : netkat_scope.
+  Notation "f != v" := (NFilter f v) (at level 30, no associativity) : netkat_scope.
+  Notation "p + q" := (Union p q) (at level 50, left associativity) : netkat_scope.
+  Notation "p ;; q" := (Seq p q) (at level 40, left associativity) : netkat_scope.
+  Notation "p *" := (Star p) (at level 31, left associativity) : netkat_scope.
+  Notation "pk [ f := v ]" := (P.mod pk f v) (at level 10, no associativity) : netkat_scope.
+  Global Open Scope netkat_scope.
+  Delimit Scope netkat_scrope with netkat.
 
 
   (** * NetKAT denotational Semantics *)
 
   (* auxilliary functions for (repeated) kleisli composition *) 
-  Definition kleisli (f g : H.t -> HSet.t) : H.t -> HSet.t :=
-    fun (h : H.t) =>
-      fun (h' : H.t) => ex (fun h'' => f h h'' /\ g h'' h').
+  Definition kleisli (f g : H.t -> set H.t) : H.t -> set H.t :=
+    fun h h' => exists h'', f h h'' /\ g h'' h'.
 
-  Fixpoint power (n: nat) f :=
+  Fixpoint power n f :=
     match n with
-      | O => (fun h => HSet.singleton h)
+      | O => (fun h => singleton h)
       | S n => kleisli f (power n f)
     end.
 
   (* denotational semantics *)
-  Fixpoint interpret (p : policy) (h : H.t) : HSet.t :=
+  Fixpoint interpret (p : policy) (h : H.t) : set H.t :=
   match p, h with
   | Drop, _ => 
-      HSet.empty
+      @empty H.t
   | Id, h => 
-      HSet.singleton h
+      singleton h
   | Filter f v, (pk,h) =>
-      if V.eqb f (pk f) v then HSet.singleton (pk,h)
-      else HSet.empty
+      if V.eqb f (pk f) v then singleton (pk,h)
+      else @empty H.t
   | NFilter f v, (pk,h) =>
-      if negb (V.eqb f (pk f) v) then HSet.singleton (pk,h)
-      else HSet.empty
+      if negb (V.eqb f (pk f) v) then singleton (pk,h)
+      else @empty H.t
   | Mod f v, (pk,h) => 
-      HSet.singleton (pk[f:=v], h)
+      singleton (pk[f:=v], h)
   | p+q, h =>
-      HSet.union (interpret p h) (interpret q h)
+      union (interpret p h) (interpret q h)
   | p;;q, h =>
       kleisli (interpret p) (interpret q) h
   | p*, h =>
       fun h' => ex (fun n => power n (interpret p) h h')
   | Dup, (pk,h) => 
-      HSet.singleton (pk, pk::h)
+      singleton (pk, pk::h)
   end.
 
-  Notation "'[|' p '|]'" := (interpret p) (at level 1).
+  Notation "'[|' p '|]'" := (interpret p) (at level 1) : netkat_scope.
 
 
 
   (* Denotational equivalence. *)
   Definition equiv : relation policy := 
-    fun p q => forall h, HSet.eq ([|p|] h) ([|q|] h).
+    fun p q => forall h, eq ([|p|] h) ([|q|] h).
 
   Lemma equiv_refl : Reflexive equiv.
     Proof. intros p h. reflexivity. Qed.
@@ -105,8 +99,8 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Instance equiv_equiv : Equivalence equiv.
   Proof. split; [apply equiv_refl | apply equiv_sym | apply equiv_trans]. Qed. 
 
-  Notation "p === q" := (equiv p q) (at level 80).
-  Notation "p <== q" := (p + q === q) (at level 80).
+  Notation "p === q" := (equiv p q) (at level 80) : netkat_scope.
+  Notation "p <== q" := (p + q === q) (at level 80) : netkat_scope.
 
 
   (* The NetKAT operators are "proper" w.r.t. equivalence ===,
@@ -131,8 +125,8 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     Proper (equiv ==> equiv ==> equiv) Union.
   Proof.
     intros p p' Hp q q' Hq.
-    assert (p'+q === p'+q') by apply (plus_equiv_right p' q q' Hq).
-    assert (p+q === p'+q) by apply (plus_equiv_left p p' q Hp).
+    assert (p'+q === p'+q') by auto using plus_equiv_right, Hq.
+    assert (p+q === p'+q) by auto using plus_equiv_left, Hp.
     rewrite H0; rewrite H; reflexivity.
   Qed.
 
@@ -155,7 +149,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     Proper (equiv ==> equiv ==> equiv) Seq.
   Proof. 
     intros p p' Hp q q' Hq.
-    rewrite (seq_equiv_left _ _ q Hp).
+    rewrite (seq_equiv_left _ _ _ Hp).
     rewrite (seq_equiv_right p' _ _ Hq).
     reflexivity.
   Qed.
@@ -181,8 +175,8 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   (** * NetKAT Axioms & useful corollaries *)
 
   (* some auxilliary lemmas about kleisli composition *)
-  Lemma kleisli_assoc: forall p q r h,
-    HSet.eq (kleisli (kleisli p q) r h) (kleisli p (kleisli q r) h).
+  Lemma kleisli_assoc: forall f f' f'' h,
+    eq (kleisli (kleisli f f') f'' h) (kleisli f (kleisli f' f'') h).
   Proof.
     intros p q r h0.
     intros h1.
@@ -191,38 +185,38 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     repeat (eapply ex_intro; intuition eauto).
   Qed.
 
-  Lemma kleisli_right_id: forall p h, HSet.eq (p h) (kleisli p HSet.singleton h).
+  Lemma kleisli_right_id: forall f h, eq (f h) (kleisli f (@singleton H.t) h).
   Proof.
     intros p h h'.
     split; intros H.
-    + exists h'; auto.
+    + exists h'; intuition.
     + destruct H as [h'' [H0 H1]]. congruence.
   Qed.
 
-  Lemma kleisli_left_id: forall p h, HSet.eq (p h) (kleisli HSet.singleton p h).
+  Lemma kleisli_left_id: forall f h, eq (f h) (kleisli (@singleton H.t) f h).
   Proof.
     intros p h h'.
     split; intros H.
-    + exists h; auto.
+    + exists h; intuition.
     + destruct H as [h'' [H0 H1]]. congruence.
   Qed.
 
   Lemma power_slide: forall n f h, 
-    HSet.eq (power (S n) f h) (kleisli (power n f) f h).
+    eq (power (S n) f h) (kleisli (power n f) f h).
   Proof.
     intros n.
     induction n; intros f h.
     + simpl. unfold kleisli. split; intros H; destruct H as [h'' [H0 H1]].
       - exists h. intuition congruence.
       - exists x. intuition congruence.
-    + cut (HSet.eq (kleisli f (power (S n) f) h) (kleisli (kleisli f (power n f)) f h)); auto.
+    + cut (eq (kleisli f (power (S n) f) h) (kleisli (kleisli f (power n f)) f h)); auto.
       rewrite -> kleisli_assoc. intros h'.
       split; intros H; destruct H as [h'' [H0 H1]];
       exists h''; split; try(apply IHn); assumption.
   Qed.
 
   Corollary power_slide': forall n f h, 
-    HSet.eq (kleisli f (power n f) h) (kleisli (power n f) f h).
+    eq (kleisli f (power n f) h) (kleisli (power n f) f h).
   Proof.
     apply power_slide.
   Qed.
@@ -241,29 +235,28 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     - destruct H as [h'' [H0 H1]]. congruence.
     - destruct H as [h'' [H0 H2]].
       destruct H0 as [h''' [H0 H1]].
-      exists h'''; intuition.
-      apply IHm. exists h''. intuition.
+      exists h'''; eauto.
     Qed.
 
   (* NetKAT axioms and useful corollaries *)
   Theorem ka_plus_assoc : forall p q r : policy, (p+q)+r === p+(q+r).
   Proof.
    intros p q r h.
-   apply HSet.union_assoc.
+   apply union_assoc.
   Qed.
 
   Theorem ka_plus_comm : forall p q : policy, p + q === q + p.
   Proof.
    intros p q h.
    simpl.
-   apply HSet.union_comm.
+   apply union_comm.
   Qed.
 
   Theorem ka_plus_zero : forall p : policy, p + Drop === p.
   Proof.
     intros p h.
     simpl.
-    apply HSet.union_empty_right.
+    apply union_empty_right.
   Qed.
 
   Corollary ka_zero_plus: forall p : policy, Drop + p === p.
@@ -276,7 +269,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   Proof.
     intros p h.
     simpl.
-    apply HSet.union_idem.
+    apply union_idem.
   Qed.
 
   Theorem ka_seq_assoc : forall p q r : policy, (p;;q);;r === p;;(q;;r).
@@ -309,8 +302,8 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     split; intro H.
     + destruct H as [h' [H0 [H1|H1]]]; [left | right]; exists h'; auto.
     + repeat destruct H; exists x; intuition eauto.
-      - apply HSet.union_mono_left; assumption.
-      - apply HSet.union_mono_right; assumption.
+      - apply union_mono_left; assumption.
+      - apply union_mono_right; assumption.
   Qed.
 
   Theorem ka_seq_dist_r : forall p q r : policy,
@@ -320,8 +313,8 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
     split; intro H.
     + destruct H as [h' [[H1|H1] H0]]; [left | right]; exists h'; auto.
     + repeat destruct H; exists x; intuition eauto.
-      - apply HSet.union_mono_left; assumption.
-      - apply HSet.union_mono_right; assumption.
+      - apply union_mono_left; assumption.
+      - apply union_mono_right; assumption.
   Qed.
 
   Theorem ka_zero_seq : forall p : policy, Drop;; p === Drop.

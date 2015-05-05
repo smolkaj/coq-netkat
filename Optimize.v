@@ -48,12 +48,12 @@ Lemma star_zero: Drop* === Id.
 Proof. rewrite <- ka_unroll_l. netkat. Qed.
 Hint Rewrite star_zero : netkat.
 
-Lemma star_one_aux: forall n h, HSet.eq (power n [|Id|] h) ([|Id|] h).
+Lemma star_one_aux: forall n h, eq (power n [|Id|] h) ([|Id|] h).
 Proof.
   induction n; intros h h'; intuition.
   simpl in H. destruct H as [h'' [H0 H1]].
   + apply IHn in H1. congruence.
-  + simpl. exists (a,b). intuition. apply IHn. assumption.
+  + simpl. exists h. intuition. apply IHn. assumption.
 Qed.
 
 Lemma star_one: Id* === Id.

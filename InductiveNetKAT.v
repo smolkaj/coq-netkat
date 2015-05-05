@@ -48,19 +48,19 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
   Proof.
     intros p.
     induction p; intros h h' H; destruct h as [pk h];
-    simpl in H; try (unfold HSet.empty in H); try (unfold HSet.singleton in H);
+    simpl in H; try (unfold empty in H); try (unfold singleton in H);
     try (subst h'; constructor); intuition.
     - case (V.eqb f (pk f) t) eqn: H'; intuition.
       rewrite V.eqb_eq in H'. subst h'. auto.
     - case (V.eqb f (pk f) t) eqn: H'; simpl in H; intuition.
       + subst h'. constructor. simpl. rewrite <- V.eqb_eq. intuition. congruence.
     - destruct H; [apply BstepPlusLeft|apply BstepPlusRight]; intuition.
-    - destruct H as [h'']. apply (BstepSeq _ h''); intuition.
+    - destruct H as [h'']. eapply BstepSeq; intuition eauto.
     - destruct H as [n].
       generalize dependent pk; generalize dependent h; generalize dependent h';
       induction n; intros h' h pk H; simpl in H.
-      + unfold HSet.singleton in H. subst h'. constructor.
-      + destruct H as [h'']. apply (BstepStarTrans _ h'');
+      + unfold singleton in H. subst h'. constructor.
+      + destruct H as [h'']. eapply BstepStarTrans; intuition eauto.
         destruct h'' as [pk'' h'']; intuition.
     Qed.
 

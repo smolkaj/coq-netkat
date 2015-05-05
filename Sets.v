@@ -1,56 +1,66 @@
+Set Implicit Arguments.
+
 Require Import Equalities.
 Require Import List.
 Require Import FunctionalExtensionality.
 Require Import Relations.
+Require Import Classes.
 
-Module set(X : UsualDecidableTypeFull).
+Section set.
 
-Definition t := X.t -> Prop.
+Variable X : Type.
+Context `{EqType X}.
 
-Definition empty : t := fun _ => False.
+Definition set := X -> Prop.
 
-Definition full : t := fun _ => True.
+Implicit Types x y z : X.
+Implicit Types A B C : set.
 
-Definition singleton (x : X.t) := fun y => x=y.
+Definition empty : set := fun _ => False.
 
-Definition list (xs : list X.t) := fun y => List.In y xs.
+Definition full : set := fun _ => True.
 
-Definition union (A : t) (B : t) := fun x => A x \/ B x.
+Definition singleton x : set := fun y => x=y.
 
-Definition eq : relation t := 
+Definition list xs : set := fun y => List.In y xs.
+
+Definition union A B : set := fun x => A x \/ B x.
+
+Definition eq : relation set := 
   fun A B => forall x, A x <-> B x.
 
 Lemma eq_refl : Reflexive eq.
-Proof. intros A x. reflexivity. Qed.
+Proof. intros A x; reflexivity. Qed.
 
 Lemma eq_sym : Symmetric eq.
-Proof. intros A B H x. symmetry. apply (H x). Qed.
+Proof. intros A B H0 x. symmetry. apply (H0 x). Qed.
 
 Lemma eq_trans : Transitive eq.
 Proof. intros A B C H1 H2 x. rewrite -> (H1 x). apply (H2 x). Qed.
 
 (* This allows us to use reflexivity, symmetry, and rewrite for set equality *)
-Instance eq_equiv : Equivalence eq.
+Global Instance eq_equiv : Equivalence eq.
 Proof. split; [apply eq_refl | apply eq_sym | apply eq_trans]. Qed.
 
-Notation "A == B" := (eq A B) (at level 20, no associativity).
+Notation "A == B" := (eq A B) (at level 20, no associativity) : set_scope.
 Hint Unfold eq.
+Open Scope set_scope.
 
-Lemma union_assoc : forall A B C : t,
+Lemma union_assoc : forall A B C,
   union (union A B) C == union A (union B C).
 Proof.
   intros A B C x.
   apply or_assoc.
 Qed.
 
-Lemma union_comm : forall A B : t,
+Lemma union_comm : forall A B,
   union A B == union B A.
 Proof.
   intros A B x.
   apply or_comm.
 Qed.
 
-Lemma union_empty_right : forall A : t,
+Lemma union_empty_right : forall A,
   union A empty == A.
 Proof.
   intros A x.
@@ -59,7 +69,7 @@ Proof.
   intuition.
 Qed.
 
-Lemma union_empty_left : forall A : t,
+Lemma union_empty_left : forall A,
   union empty A == A.
 Proof.
   intros A.
@@ -67,21 +77,21 @@ Proof.
   apply union_empty_right.
 Qed.
 
-Lemma union_mono_left : forall A B : t, forall x : X.t,
+Lemma union_mono_left : forall A B x,
   A x -> union A B x.
 Proof.
   intros.
   unfold union; left; assumption.
 Qed.
 
-Lemma union_mono_right : forall A B : t, forall x : X.t,
+Lemma union_mono_right : forall A B x,
   B x -> union A B x.
 Proof.
   intros.
   unfold union; right; assumption.
 Qed.
 
-Lemma union_idem : forall A : t,
+Lemma union_idem : forall A,
   union A A == A.
 Proof.
   intros A x.
@@ -89,15 +99,16 @@ Proof.
   intuition.
 Qed.
 
-Lemma singleton_iff : forall x y: X.t,
+Lemma singleton_iff : forall x y,
   singleton x y <-> x=y.
 Proof. intuition. Qed.
 
-Lemma singleton_refl : forall x : X.t,
+Lemma singleton_refl : forall x,
   singleton x x.
 Proof. intuition. Qed.
 
-Global Hint Unfold singleton full empty.
-Global Hint Resolve union_empty_right union_empty_left union_idem singleton_refl.
-
 End set.
+
+Hint Unfold singleton full empty.
+Hint Resolve singleton full empty.
+
