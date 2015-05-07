@@ -44,6 +44,7 @@ Global Instance : EqType bool := bool_dec.
 Global Instance : EqType nat := eq_nat_dec.
 Global Program Instance : EqType True := fun x y => match x,y with I,I => left _ end. 
 Global Program Instance : EqType False := fun x y => match x,y with end.
+Global Program Instance : EqType unit := fun x y =>  match x,y with tt,tt => left _ end.
 
 Global Program Instance sum_EqType `(EqType X) `(EqType Y) : EqType(X+Y) :=
 fun a b =>
@@ -99,6 +100,9 @@ Proof. unfold enum'; auto. Qed.
 Hint Resolve in_enum'.
 
 Global Program Instance : Finite bool := [true;false].
+Next Obligation. destruct x; intuition. Defined.
+
+Global Program Instance : Finite unit := [tt].
 Next Obligation. destruct x; intuition. Defined.
 
 Global Program Instance : Finite True := [I].

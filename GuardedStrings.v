@@ -69,12 +69,17 @@ Proof.
   unfold accept in *; simpl;  try invert H; auto.
   + apply exists_iff; exists q'.
     apply andb_true_iff. intuition eauto.
-  + apply exists_iff in H1. destruct H1 as [x H1].
+  + apply exists_iff in H1. destruct H1 as [q' H1].
     apply andb_true_iff in H1; destruct H1 as [H1 H2].
     eauto.
 Qed.
 
 Definition nfa_lang (A : nfa) := [$ gs | accept (nfa_s A) gs ].
+
+
+
+
+
 
 Definition residual a b L :=
   [ b'~c#w | eqb b b' && a~b#(c::w) \in L ].
