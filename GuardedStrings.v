@@ -20,25 +20,32 @@ Global Instance : Finite P.t := P_finite.
 
 (** guarded strings **)
 
-Notation gs := (prod (prod P.t P.t) (list P.t)).
-Notation "a ~ b # w" := (pair (pair a b) w) (at level 0).
+Inductive gs := GS : P.t -> list P.t -> P.t -> gs.
+Arguments GS a w b : rename.
+Hint Constructors gs.
+Notation "a ~ w # b" := (GS a w b) (at level 1, format
+ "a ~ w # b").
+Global Program Instance : EqType gs := fun x y => match x,y with
+  a~w#b,a'~w'#b' => if (a,w,b) =d= (a',w',b') then left _ else right _
+end.
+
+Parameters (a b : P.t) (w : list P.t).
+Check (a~w#b).
+
+(*
 Notation "[ a ~ b # w | B ]" := (fun s => let 'a~b#w := s in B)
   (at level 0, a ident, b ident, w ident).
+*)
 
 Definition gs_length (gs : gs) :=
-  let '_~_#w := gs in length w.
-
-Definition gs_last (gs : gs) :=
-  let '_~a#w := gs in last w a.
+  let '_~w#_ := gs in length w.
 
 Definition gs_conc (s1 s2 : gs) :=
-  let 'a~b#w := s1 in
-  let 'c~d#v := s2 in
-  if gs_last s1 =d= c then 
+  let 'a~w#b := s1 in
+  let 'b'~v#c := s2 in
+  if b =d= b' then Some (a~w++v#c) else None.
 
 Definition gs_lang := (pred gs).
-
-Fixpoint 
 
 (** End guarded strings **)
 
@@ -66,11 +73,11 @@ Arguments nfa_trans {A} q a b q' : rename.
 
 Fixpoint accept_n {A : nfa} (q : A) gs n :=
 match gs with
-  | a~b#[] => nfa_accept q a b
-  | a~b#(c::w) =>
+  | a~[]#b => nfa_accept q a b
+  | a~(b::w)#c =>
   match n with
   | O => false
-  | S n => [$ exists q' | nfa_trans q a b q' && accept_n q' b~c#w n ]
+  | S n => [$ exists q' | nfa_trans q a b q' && accept_n q' b~w#c n ]
   end
 end.
 
@@ -78,14 +85,14 @@ Definition accept {A : nfa} (q : A) gs := accept_n q gs (gs_length gs).
 Hint Unfold accept.
 
 Inductive accept_prop {A : nfa} (q : A) : gs -> Prop :=
-  | accept_atom : forall a b, nfa_accept q a b = true -> accept_prop q a~b#[]
-  | accept_trans : forall a b c w q', nfa_trans q a b q' = true -> accept_prop q' b~c#w -> 
-      accept_prop q a~b#(c::w).
+  | accept_atom : forall a b, nfa_accept q a b = true -> accept_prop q a~[]#b
+  | accept_trans : forall a b c w q', nfa_trans q a b q' = true -> accept_prop q' b~w#c -> 
+      accept_prop q a~(b::w)#c.
 Hint Constructors accept_prop.
 
 Theorem accept_correct (A : nfa) (q : A) gs : accept_prop q gs <-> accept q gs = true.
 Proof.
-  destruct gs as [[a b] w].
+  destruct gs as [a w b].
   split; intro H; gd q; gd a; gd b; induction w; intros;
   unfold accept in *; simpl;  try invert H; auto.
   + apply exists_iff; exists q'.
@@ -111,22 +118,22 @@ Definition nfa_singleton a b :=
 
 Lemma nfa_empty_correct : nfa_lang nfa_empty = pred0.
 Proof.
-  extensionality x.
+  extensionality s.
   unfold nfa_lang.
-  unfold accept; destruct x as [[a b] [ |c w]]; simpl; reflexivity.
+  unfold accept; destruct s as [a [ |b w] c]; simpl; reflexivity.
 Qed.
 
 
 Lemma nfa_singleton_correct a b : 
-  nfa_lang (nfa_singleton a b) = [$ w | w =b= a~b#[] ].
+  nfa_lang (nfa_singleton a b) = [$ w | w =b= a~[]#b ].
 Proof.
   extensionality x. unfold nfa_lang, accept.
-  destruct (x =d= a~b#[]); subst; simpl.
+  destruct (x =d= a~[]#b); subst; simpl.
   + rewrite eqb_refl.
     destruct (a =d= a); destruct (b =d= b); congruence.
   + rewrite <- eqb_eq_false in n. rewrite n.
-    destruct x as [[a' b'] [ | c w]]; simpl; auto.
-    destruct (a =d= a'); destruct (b =d= b'); try congruence.
+    destruct x as [a' [ | b' w] c]; simpl; auto.
+    destruct (a =d= a'); destruct (b =d= c); try congruence.
     subst; rewrite eqb_refl in n. assumption.
 Qed.
 
@@ -155,7 +162,7 @@ Definition nfa_union (A B : nfa) :=
 Lemma nfa_union_correct_left (A B : nfa) (q:A) gs :
   @accept_prop (nfa_union A B) (Some (inl q)) gs <-> accept_prop q gs.
 Proof.
-  destruct gs as [[a b] w].
+  destruct gs as [a w b].
   gd a; gd b; gd q; induction w; intros;
   split; intro H; inversion H; simpl in *; eauto 2.
   + destruct q' as [[q'|q']| ]; inversion H2. econstructor; eauto.
@@ -174,7 +181,7 @@ Qed.
 Lemma nfa_union_correct_right (A B : nfa) (q:B)  gs :
   @accept_prop (nfa_union A B) (Some (inr q)) gs <-> accept_prop q gs.
 Proof.
-  destruct gs as [[a b] w].
+  destruct gs as [a w b].
   gd a; gd b; gd q; induction w; intros;
   split; intro H; inversion H; simpl in *; eauto 2.
   + destruct q' as [[q'|q']| ]; inversion H2. econstructor; eauto.
@@ -196,7 +203,7 @@ Proof.
   unfold nfa_lang.
   apply pred_eq_intro.
   intro gs. rewrite orb_true_iff. repeat rewrite <- accept_correct.
-  destruct gs as [[a b] [ | c w]];
+  destruct gs as [a [ | b w] c];
   split; intro H; [ |destruct H as [H|H]| |destruct H as [H|H]];
   inversion H; simpl in *.
   - destruct (orb_prop _ _ H1) as [H3|H3]; eauto.
@@ -245,7 +252,7 @@ Lemma seq_inr A1 A2 q gs :
 Proof.
   apply (bool_iff (@accept_prop (nfa_seq A1 A2) (inr q) gs) (accept_prop q gs));
   try apply accept_correct.
-  destruct gs as [[a b] w].
+  destruct gs as [a w b].
   split; intro H; gd a; gd b; gd q; induction w; intros; invert H; simpl in *; auto.
   - destruct q'; eauto 4. invert H2.
   - econstructor. instantiate (1 := inr q'). simpl. assumption. eauto.
