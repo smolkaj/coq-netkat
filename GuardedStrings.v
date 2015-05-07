@@ -26,7 +26,15 @@ Notation "[ a ~ b # w | B ]" := (fun s => let 'a~b#w := s in B)
   (at level 0, a ident, b ident, w ident).
 
 Definition gs_length (gs : gs) :=
- let '_~_#w := gs in length w.
+  let '_~_#w := gs in length w.
+
+Definition gs_last (gs : gs) :=
+  let '_~a#w := gs in last w a.
+
+Definition gs_conc (s1 s2 : gs) :=
+  let 'a~b#w := s1 in
+  let 'c~d#v := s2 in
+  if gs_last s1 =d= c then 
 
 Definition gs_lang := (pred gs).
 
