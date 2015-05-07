@@ -1,8 +1,25 @@
-Require Import List Bool Arith.
-Import ListNotations.
+Require Import List Bool Arith Setoid Morphisms.
 Require Import Relations Morphisms.
 Require Import Omega FunctionalExtensionality.
 Require Import Misc.
+Import ListNotations.
+
+(* decidable sets as in ssreflect *)
+Definition pred T := T -> bool.
+(* Identity Coercion fun_of_pred : pred >-> Funclass. *)
+
+Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident) : bool_scope.
+Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident) : bool_scope.
+Notation "x \in L" := (L x = true) (at level 0) : bool_scope.
+
+Notation pred0 := [$ _ | false ].
+Notation pred1 := [$ _ | true ].
+Notation predI := (fun (p1 p2 : pred _) x => p1 x && p2 x).
+Notation predU := (fun (p1 p2 : pred _) x => p1 x || p2 x).
+Notation predC := (fun (p : pred _) x => ~~ p x).
+
+
+
 
 Generalizable Variables X Y.
 
@@ -52,6 +69,7 @@ match xs, ys with
     else right _
 end.
 
+
 Eval compute in eqb 
   [(1,true);(2,false);(3,true)]
   [(1,true);(2,false);(3,true)].
@@ -65,12 +83,20 @@ Recursive Extraction test.
 
 
 
-Section Finite.
+(** Section Finite **)
 
 Class Finite (X : Type) : Type := enum : {xs: list X|forall x, In x xs}.
 
 Definition enum' X `{Finite X} := proj1_sig enum.
 Hint Unfold enum'.
+
+Theorem in_enum `{Finite X} (x:X) : In x (proj1_sig enum).
+Proof. destruct enum; simpl; auto. Qed.
+Hint Resolve in_enum. 
+
+Corollary in_enum' `{Finite X} (x:X) : In x (enum' X).
+Proof. unfold enum'; auto. Qed.
+Hint Resolve in_enum'.
 
 Global Program Instance : Finite bool := [true;false].
 Next Obligation. destruct x; intuition. Defined.
@@ -82,22 +108,15 @@ Global Program Instance : Finite False := [].
 
 Global Program Instance sum_finite `(p1:Finite X) `(p2:Finite Y) : Finite(X+Y) :=
   (map (@inl X Y) enum) ++ (map (@inr X Y) enum).
-Next Obligation.
-  destruct (@enum X p1) as [xs px]; destruct (@enum Y p2) as [ys py]; simpl.
-  apply in_or_app.
-  destruct x; [left|right]; auto using in_map.
-Defined.
+Next Obligation. destruct x; auto using in_map, in_or_app. Defined.
 
 Global Program Instance prod_finite `(px: Finite X) `(py: Finite Y) : Finite(X*Y) :=
   list_prod enum enum.
-Next Obligation.
-  destruct (@enum X px) as [xs p1]; destruct (@enum Y py) as [ys p2]; simpl.
-  auto using in_prod.
-Defined.
+Next Obligation. auto using in_prod. Defined.
 
 
 
-Section Finite_Of_List.
+(** Section Finite of list. **)
 
 Program Definition weaken {X} {xs: list X} x (y : {y|In y xs}) : {y|In y (x::xs)} := y.
 Program Fixpoint siglist {X} (xs : list X) : list {x:X|In x xs} :=
@@ -119,10 +138,26 @@ Next Obligation.
     apply in_map. auto.
 Defined.
 
-End Finite_Of_List.
+(** End Finite_Of_List. **)
 
 
-End Finite.
+(* decidable exists on finite types *)
+
+Notation "[$ 'exists' x | B ]" := (existsb (fun x => B) (enum' _))
+  (at level 0, x ident) : bool_scope.
+Notation "[$ 'exists' x : T | B ]" := (existsb (fun x : T => B) (enum' _))
+  (at level 0, x ident) : bool_scope.
+
+Theorem exists_iff `(Finite X) B : (exists x, B x = true) <-> [$ exists x | B x] = true.
+Proof.
+  rewrite existsb_exists.
+  split; intro H0; destruct H0 as [x H0]; exists x; intuition eauto.
+Qed.
+Hint Resolve exists_iff.
+
+(** End Finite. **)
+
+
 
 
 

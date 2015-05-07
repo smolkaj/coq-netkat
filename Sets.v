@@ -22,7 +22,7 @@ Definition full : set := fun _ => True.
 
 Definition singleton x : set := fun y => x=y.
 
-Definition list xs : set := fun y => List.In y xs.
+(* Definition List xs : set := fun y => List.In y xs. *)
 
 Definition union A B : set := fun x => A x \/ B x.
 

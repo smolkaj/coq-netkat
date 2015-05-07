@@ -1,17 +1,16 @@
-Require Export Field.
-Require Export Value.
-Require Import List.
-Require Import Equalities.
-Require Import FunctionalExtensionality.
+Require Export Field Value Classes.
+Require Import List Equalities FunctionalExtensionality.
 
 Module Type PACKET (F : FIELDSPEC) (V : VALUESPEC(F)).
   Definition t : Type := forall f:F.t, (V.t f).
+  Parameter eq_dec : forall x y : t, {x = y} + {x <> y}.
   Parameter mod : t -> forall f : F.t, V.t f -> t.
-  (* Print UsualDecidableTypeFull *)
+  Global Instance eqType : EqType t := eq_dec.
+  (* Print UsualDecidableTypeFull *) (*
   Definition eq (p1 p2 : t) := (p1 = p2).
   Parameter eq_dec : forall x y : t, {x = y} + {x <> y}.
   Parameter eqb : t -> t -> bool.
-  Parameter eqb_eq : forall x y : t, eqb x y = true <-> x = y.
+  Parameter eqb_eq : forall x y : t, eqb x y = true <-> x = y. *)
 End PACKET.
 
 Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) : PACKET(F)(V).
@@ -56,5 +55,7 @@ Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) : PACKET(F)(V).
       | right ne => pk f'
       end.
   *)
+
+  Global Instance eqType : EqType t := eq_dec.
 
 End Packet.
