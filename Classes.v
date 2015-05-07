@@ -8,15 +8,27 @@ Import ListNotations.
 Definition pred T := T -> bool.
 (* Identity Coercion fun_of_pred : pred >-> Funclass. *)
 
+Notation "x \in L" := (L x) (at level 30, L at next level, only parsing) : bool_scope.
 Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident) : bool_scope.
 Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident) : bool_scope.
-Notation "x \in L" := (L x) (at level 0, only parsing) : bool_scope.
+
 
 Notation pred0 := [$ _ | false ].
 Notation pred1 := [$ _ | true ].
+(*
 Notation predI := (fun (p1 p2 : pred _) x => p1 x && p2 x).
 Notation predU := (fun (p1 p2 : pred _) x => p1 x || p2 x).
 Notation predC := (fun (p : pred _) x => ~~ p x).
+*)
+
+Theorem pred_eq_intro {X} (B1 B2 : X -> bool) : 
+  (forall x, B1 x = true <-> B2 x = true) -> [$ x | B1 x ] = [$ x | B2 x ].
+Proof.
+  intro H.
+  extensionality x.
+  assert (H0 := H x); clear H.
+  case_eq(B1 x); case_eq(B2 x); intros H1 H2; intuition; congruence.
+Qed.
 
 
 
@@ -168,7 +180,36 @@ Notation "[$ 'exists' x | B ]" := (existsb (fun x => B) (enum' _))
 Notation "[$ 'exists' x : T | B ]" := (existsb (fun x : T => B) (enum' _))
   (at level 0, x ident) : bool_scope.
 
-Theorem exists_iff `(Finite X) B : (exists x, B x = true) <-> [$ exists x | B x] = true.
+Theorem in_nth {X} (x : X) y xs : In x xs -> exists n, n < length xs /\ nth n xs y = x.
+Proof. 
+  induction xs; intros; destruct H.
+  + subst a. exists 0; simpl. intuition.
+  + destruct (IHxs H) as [n H']. exists (S n); simpl. intuition.
+Qed.
+
+Theorem existsb_false {X B xs} :
+  existsb B xs = false <-> (forall x : X, In x xs -> B x = false).
+Proof.
+  split.
+  + intros H0 x H1.
+    apply in_nth with (y:=x) in H1. destruct H1 as [n [H1 H2]].
+    rewrite <- H2.
+    eauto using existsb_nth.
+  + intros. induction xs; simpl; auto.
+    apply orb_false_iff. split.
+    - apply H. simpl; auto.
+    - apply IHxs. intros. apply H. simpl; auto.
+Qed.
+
+Theorem exists_false `{Finite X} B :
+  [$ exists x : X | B x ] = false <-> (forall x:X, B x = false).
+Proof.
+  split; intros.
+  + eapply existsb_false in H0; eauto.
+  + apply existsb_false; eauto.
+Qed.
+
+Theorem exists_iff `(Finite X) B : (exists x, B x = true) <-> [$ exists x | B x ] = true.
 Proof.
   rewrite existsb_exists.
   split; intro H0; destruct H0 as [x H0]; exists x; intuition eauto.
