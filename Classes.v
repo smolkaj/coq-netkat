@@ -10,7 +10,7 @@ Definition pred T := T -> bool.
 
 Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident) : bool_scope.
 Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident) : bool_scope.
-Notation "x \in L" := (L x = true) (at level 0) : bool_scope.
+Notation "x \in L" := (L x) (at level 0) : bool_scope.
 
 Notation pred0 := [$ _ | false ].
 Notation pred1 := [$ _ | true ].
