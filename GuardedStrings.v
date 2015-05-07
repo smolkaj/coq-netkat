@@ -11,9 +11,14 @@ Ltac gd id := generalize dependent id.
 Module GS (F : FIELDSPEC) (V : VALUESPEC(F)).
 Include NetKAT.NetKAT(F)(V).
 
-(*
-Inductive gs := GS : list P.t -> P.t -> P.t -> gs.
-Hint Constructors gs. *)
+(* For now, assume that the set of packets is finite as an axiom.
+   This will follow automatically once we show that
+   Finite X -> Finite Y -> Finite (X->Y).                        *)
+Axiom P_finite : Finite P.t.
+Global Instance : Finite P.t := P_finite.
+
+
+(** guarded strings **)
 
 Notation gs := (prod (prod P.t P.t) (list P.t)).
 Notation "a ~ b # w" := (pair (pair a b) w) (at level 0).
@@ -23,10 +28,18 @@ Notation "[ a ~ b # w | B ]" := (fun s => let 'a~b#w := s in B)
 Definition gs_length (gs : gs) :=
  let '_~_#w := gs in length w.
 
-(* guarded strings *)
 Definition gs_lang := (pred gs).
 
-Implicit Types (a b c d : P.t) (w : list P.t) (L : gs_lang).
+Fixpoint 
+
+(** End guarded strings **)
+
+
+
+
+
+
+(** NFAs **)
 
 Record nfa := {
   nfa_state :> Type;
@@ -193,7 +206,53 @@ Qed.
 (** End nfa_union **)
 
 
-(** Section nfa_
+Section nfa_seq.
+
+Definition nfa_seq A1 A2 : nfa :=
+ {| nfa_s := inl (nfa_s A1);
+    nfa_accept q a b :=
+      match q with
+        | inl q => [$ exists c | (nfa_accept q a c) && (nfa_accept (nfa_s A2) c b)]
+        | inr q => nfa_accept q a b
+      end;
+    nfa_trans q a b q' :=
+      match q,q' with
+        | inl q, inl q' => nfa_trans q a b q'
+        | inl q, inr q' => [$ exists c | (nfa_accept q a c) && (nfa_trans (nfa_s A2) c b q')]
+        | inr q, inr q' => nfa_trans q a b q'
+        | inr q, inl q' => false
+      end
+ |}.
+
+Lemma bool_iff P1 P2 B1 B2 :
+  (P1 <-> B1 = true) -> (P2 <-> B2 = true) -> (P1 <-> P2) -> B1=B2.
+Proof.
+  intros H1 H2 H.
+  assert(B1 = true <-> B2 = true) by (rewrite <- H1; rewrite <- H2; assumption).
+  case_eq B1; case_eq B2; intuition congruence.
+Qed.
+
+Lemma seq_inr A1 A2 q gs :
+  @accept (nfa_seq A1 A2) (inr q) gs = accept q gs.
+Proof.
+  apply (bool_iff (@accept_prop (nfa_seq A1 A2) (inr q) gs) (accept_prop q gs));
+  try apply accept_correct.
+  destruct gs as [[a b] w].
+  split; intro H; gd a; gd b; gd q; induction w; intros; invert H; simpl in *; auto.
+  - destruct q'; eauto 4. invert H2.
+  - econstructor. instantiate (1 := inr q'). simpl. assumption. eauto.
+Qed.
+
+Lemma seq_correct A1 A2 q gs :
+
+Lemma seq_inl A1 A2 q gs : reflect
+  (exists w1 w2, [/\ w = w1 ++ w2 , nfa_accept A1 x w1 & w2 \in nfa_lang A2])
+  (nfa_accept (nfa_conc A1 A2) (inl x) w).
+
+End nfa_seq.
+
+
+
 
 Definition residual a b L :=
   [ b'~c#w | eqb b b' && a~b#(c::w) \in L ].
