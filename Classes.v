@@ -10,7 +10,7 @@ Definition pred T := T -> bool.
 
 Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident) : bool_scope.
 Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident) : bool_scope.
-Notation "x \in L" := (L x) (at level 0) : bool_scope.
+Notation "x \in L" := (L x) (at level 0, only parsing) : bool_scope.
 
 Notation pred0 := [$ _ | false ].
 Notation pred1 := [$ _ | true ].
@@ -26,17 +26,23 @@ Generalizable Variables X Y.
 
 
 
-Section Equality_Type.
+(** Section Equality_Type. **)
 
 Class EqType (X : Type) : Type := eq_dec : forall x y : X, {x=y} + {x<>y}.
 
 Definition eqb `{EqType X} (x y : X) := if eq_dec x y then true else false.
+
+Notation "x =d= y" := (eq_dec x y) (at level 70, no associativity) : bool_scope.
+Notation "x =b= y" := (eqb x y) (at level 70, no associativity, only parsing) : bool_scope.
 
 Theorem eqb_eq `{EqType X} (x y : X) : eqb x y = true <-> x=y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
 
 Theorem eqb_eq_false `{EqType X} (x y : X) : eqb x y = false <-> x<>y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. Qed.
+
+Theorem eqb_refl `{EqType X} (x : X) : eqb x x = true.
+Proof. apply eqb_eq. reflexivity. Qed.
 
 Hint Resolve eqb_eq eqb_eq_false.
 
@@ -45,6 +51,12 @@ Global Instance : EqType nat := eq_nat_dec.
 Global Program Instance : EqType True := fun x y => match x,y with I,I => left _ end. 
 Global Program Instance : EqType False := fun x y => match x,y with end.
 Global Program Instance : EqType unit := fun x y =>  match x,y with tt,tt => left _ end.
+Global Program Instance option_EqType `{EqType X} : EqType (option X) := fun x y =>
+match x,y with 
+  | None, None => left _
+  | Some x, Some y => if eq_dec x y then left _ else right _
+  | None, Some _ | Some _, None => right _
+end.
 
 Global Program Instance sum_EqType `(EqType X) `(EqType Y) : EqType(X+Y) :=
 fun a b =>
@@ -75,10 +87,10 @@ Eval compute in eqb
   [(1,true);(2,false);(3,true)]
   [(1,true);(2,false);(3,true)].
 
-End Equality_Type.
-
 Definition test := (@eqb (list (prod bool nat)) _).
 Recursive Extraction test.
+
+(** End Equality_Type. **)
 
 
 
@@ -117,6 +129,10 @@ Next Obligation. destruct x; auto using in_map, in_or_app. Defined.
 Global Program Instance prod_finite `(px: Finite X) `(py: Finite Y) : Finite(X*Y) :=
   list_prod enum enum.
 Next Obligation. auto using in_prod. Defined.
+
+Global Program Instance option_finite `{Finite X} : Finite (option X) := 
+  None :: map (@Some X) enum.
+Next Obligation. destruct x; intuition (auto using in_map). Qed.
 
 
 

@@ -1,4 +1,4 @@
-Require Import List Coq.Program.Equality Bool Omega Recdef.
+Require Import List Coq.Program.Equality Bool Omega FunctionalExtensionality.
 Import ListNotations.
 Require Export NetKAT Sets Misc Classes.
 
@@ -77,8 +77,38 @@ Qed.
 Definition nfa_lang (A : nfa) := [$ gs | accept (nfa_s A) gs ].
 
 
+(** primitive automata **)
+
+Definition nfa_empty :=
+  {| nfa_s := tt; nfa_accept q a b := false; nfa_trans q a b q' := false |}.
+
+Definition nfa_singleton a b :=
+  {| nfa_s := tt; nfa_trans q a b q' := false;
+     nfa_accept q a' b' := if a =d= a' then (if b =d= b' then true else false)
+                           else false
+  |}.
+
+Lemma nfa_empty_correct : nfa_lang nfa_empty = pred0.
+Proof.
+  extensionality x.
+  unfold nfa_lang.
+  unfold accept; destruct x as [[a b] [ |c w]]; simpl; reflexivity.
+Qed.
 
 
+Lemma nfa_singleton_correct a b : 
+  nfa_lang (nfa_singleton a b) = [$ w | w =b= a~b#[] ].
+Proof.
+  extensionality x. unfold nfa_lang, accept.
+  destruct (x =d= a~b#[]); subst; simpl.
+  + rewrite eqb_refl.
+    destruct (a =d= a); destruct (b =d= b); congruence.
+  + rewrite <- eqb_eq_false in n. rewrite n.
+    destruct x as [[a' b'] [ | c w]]; simpl; auto.
+    destruct (a =d= a'); destruct (b =d= b'); try congruence.
+    subst; rewrite eqb_refl in n. assumption.
+Qed.
+  
 
 
 Definition residual a b L :=
