@@ -22,6 +22,8 @@ Global Instance : Finite P.t := P_finite.
 
 
 
+
+
 (** guarded strings *******************************************)
 
 Inductive gs := GS : P.t -> list P.t -> P.t -> gs.
@@ -71,11 +73,20 @@ Qed.
 
 
 
+
+
+
+
 (** languages over guarded strings *****************************)
 
 Definition gs_lang := gs -> bool.
 
 Definition gs_lang_union L1 L2 := [$ s : gs | s \in L1 || s \in L2 ].
+
+Theorem lang_union_correct L1 L2 s :
+  (s \in L1 = true \/ s \in L2 = true) <-> s \in gs_lang_union L1 L2 = true.
+Proof. rewrite <- orb_true_iff. unfold gs_lang_union. intuition. Qed.
+Hint Resolve lang_union_correct.
 
 Check existsb.
 
@@ -110,6 +121,7 @@ Proof.
     exists (take n s c). exists (drop n c s).
     intuition try fail. symmetry. apply conc_take_drop.
 Qed.
+Hint Resolve lang_conc_correct.
 
 (** End languages over guarded strings ########################*)
 
@@ -123,7 +135,7 @@ Qed.
 
 
 
-(** NFAs over guarded strings **)
+(** NFAs over guarded strings **********************************)
 
 Record nfa := {
   nfa_state :> Type;
@@ -174,7 +186,12 @@ Qed.
 Definition nfa_lang (A : nfa) := [$ gs | accept (nfa_s A) gs ].
 Hint Unfold nfa_lang.
 
-(** primitive automata **)
+
+
+
+
+
+(** primitive automata ****************************************************)
 
 Definition nfa_empty :=
   {| nfa_s := tt; nfa_accept q a b := false; nfa_trans q a b q' := false |}.
@@ -208,7 +225,9 @@ Qed.
 
 
 
-(** Section nfa_union **)
+
+
+(** nfa_union *****************************************************************)
   
 Definition nfa_union (A B : nfa) :=
   {| nfa_s := None;
@@ -267,11 +286,12 @@ Proof.
 Qed.
 
 Lemma nfa_union_correct A B :
-  nfa_lang (nfa_union A B) = [$ w | w \in nfa_lang A || w \in nfa_lang B ].
+  nfa_lang (nfa_union A B) = gs_lang_union (nfa_lang A) (nfa_lang B).
 Proof.
   unfold nfa_lang.
   apply pred_eq_intro.
-  intro gs. rewrite orb_true_iff. repeat rewrite <- accept_correct.
+  intro gs. rewrite <- lang_union_correct.
+  repeat rewrite <- accept_correct.
   destruct gs as [a [ | b w] c];
   split; intro H; [ |destruct H as [H|H]| |destruct H as [H|H]];
   inversion H; simpl in *.
@@ -287,7 +307,12 @@ Proof.
     apply nfa_union_correct_right. assumption.
 Qed.
 
-(** End nfa_union **)
+
+
+
+
+
+(** nfa_seq *****************************************************************************)
 
 
 Section nfa_seq.
@@ -327,45 +352,25 @@ Proof.
   - econstructor. instantiate (1 := inr q'). simpl. assumption. eauto.
 Qed.
 
-Lemma seq_correct A1 A2 q gs :
+Lemma seq_inl A1 A2 q s :
+  (exists s1 s2, Some s = gs_conc s1 s2 /\ accept_prop q s1
+                                        /\ s2 \in nfa_lang A2 = true) 
+  <-> (@accept (nfa_seq A1 A2) (inl q) s = true).
+Proof. admit. Qed.
 
-Lemma seq_inl A1 A2 q gs : reflect
-  (exists w1 w2, [/\ w = w1 ++ w2 , nfa_accept A1 x w1 & w2 \in nfa_lang A2])
-  (nfa_accept (nfa_conc A1 A2) (inl x) w).
+Lemma seq_correct A1 A2 :
+  nfa_lang (nfa_seq A1 A2) = gs_lang_conc (nfa_lang A1) (nfa_lang A2).
+Proof. 
+  apply pred_eq_intro. intro gs. rewrite <- lang_conc_correct.
+  unfold nfa_lang. simpl. rewrite <- seq_inl.
+  split; intro H; destruct H as [s1 [s2 [H0 [H1 H2]]]];
+  exists s1; exists s2; intuition; apply accept_correct; assumption.
+Qed.
 
 End nfa_seq.
 
 
 
-
-Definition residual a b L :=
-  [ b'~c)~w | eqb b b' && a~b)~(c::w) \in L ].
-
-
-
-
-Definition star L := fix lstar gs :=
-  let 'a~b)~w := gs in
-  match w with
-  | [] -> true
-  | c::w -> \in residual a b 
-
-
-
-Definition gs := prod (prod P.t P.t) (list P.t).
-
-(* language of guarded strings *)
-
-Definition gs_lang := pred gs.
-
-Definition e_lang : gs_lang := @empty gs.
-Definition id_lang : gs_lang := fun gs => 
-  let (gs',_) := gs in
-  let (pk,pk') := gs in
-  pk=pk'.
-
-(* finite union *)
-(* decidable set: X -> bool *)
 
 
 End GS.
