@@ -27,33 +27,32 @@ Global Instance : Finite P.t := P_finite.
 Inductive gs := GS : P.t -> list P.t -> P.t -> gs.
 Arguments GS a w b : rename.
 Hint Constructors gs.
-Notation "a ~ w # b" := (GS a w b) (at level 1, format
- "a ~ w # b").
+Notation "a ~( w )~ b" := (GS a w b) (at level 1, format "a ~( w )~ b").
 
 Global Program Instance : EqType gs := fun x y => match x,y with
-  a~w#b,a'~w'#b' => if (a,w,b) =d= (a',w',b') then left _ else right _
+  a~(w)~b, a'~(w')~b' => if (a,w,b) =d= (a',w',b') then left _ else right _
 end.
 
 Parameters (a b : P.t) (w : list P.t).
-Check (a~w#b).
+Check (a~(w)~b).
 
 Definition gs_length (gs : gs) :=
-  let '_~w#_ := gs in length w.
+  let '_~(w)~_ := gs in length w.
 
 Definition gs_conc (s1 s2 : gs) :=
-  let 'a~w#b := s1 in
-  let 'b'~v#c := s2 in
-  if b =d= b' then Some (a~w++v#c) else None.
+  let 'a~(w)~b := s1 in
+  let 'b'~(v)~c := s2 in
+  if b =d= b' then Some (a~(w++v)~c) else None.
 
 Definition take (n:nat) (s:gs) (c : P.t) : gs :=
-  let 'a~w#b := s in
+  let 'a~(w)~b := s in
   let w' := firstn n w in
-  a ~ w' # c.
+  a~(w')~c.
 
 Definition drop (n:nat) (c : P.t) (s:gs) : gs :=
-  let 'a~w#b := s in
+  let 'a~(w)~b := s in
   let w' := skipn n w in
-  c ~ w' # b.
+  c~(w')~b.
 
 Theorem conc_take_drop (s: gs) (n : nat) c : 
   gs_conc (take n s c) (drop n c s) = Some s.
@@ -78,7 +77,20 @@ Definition gs_lang := gs -> bool.
 
 Definition gs_lang_union L1 L2 := [$ s : gs | s \in L1 || s \in L2 ].
 
-Definition gs_lang_conc L1 L2 :=
+Check existsb.
+
+Definition gs_lang_conc L1 L2 := [$ s : gs | [$ exists a | 
+  existsb (fun n => take n s a \in L1 && drop n a s \in L2) (seq 0 (gs_length s)) ] ].
+
+Theorem lang_conc_correct L1 L2 s :
+  (exists s1 s2, (Some s = gs_conc s1 s2) /\ (s1 \in L1 = true) /\ (s2 \in L2 = true))
+  <-> (s \in gs_lang_conc L1 L2 = true).
+Proof.
+  split; intro H.
+  + destruct H as [s1 [s2 [H0 [H1 H2]]]].
+    destruct s1 as [a w b]; destruct s2 as [b' v c].
+    simpl in H0. destruct (b =d= b'); invert H0.
+    simpl.
 
 
 
@@ -116,11 +128,11 @@ Arguments nfa_trans {A} q a b q' : rename.
 
 Fixpoint accept_n {A : nfa} (q : A) gs n :=
 match gs with
-  | a~[]#b => nfa_accept q a b
-  | a~(b::w)#c =>
+  | a~([])~b => nfa_accept q a b
+  | a~(b::w)~c =>
   match n with
   | O => false
-  | S n => [$ exists q' | nfa_trans q a b q' && accept_n q' b~w#c n ]
+  | S n => [$ exists q' | nfa_trans q a b q' && accept_n q' b~(w)~c n ]
   end
 end.
 
@@ -128,9 +140,9 @@ Definition accept {A : nfa} (q : A) gs := accept_n q gs (gs_length gs).
 Hint Unfold accept.
 
 Inductive accept_prop {A : nfa} (q : A) : gs -> Prop :=
-  | accept_atom : forall a b, nfa_accept q a b = true -> accept_prop q a~[]#b
-  | accept_trans : forall a b c w q', nfa_trans q a b q' = true -> accept_prop q' b~w#c -> 
-      accept_prop q a~(b::w)#c.
+  | accept_atom : forall a b, nfa_accept q a b = true -> accept_prop q a~([])~b
+  | accept_trans : forall a b c w q', nfa_trans q a b q' = true -> accept_prop q' b~(w)~c -> 
+      accept_prop q a~(b::w)~c.
 Hint Constructors accept_prop.
 
 Theorem accept_correct (A : nfa) (q : A) gs : accept_prop q gs <-> accept q gs = true.
@@ -168,10 +180,10 @@ Qed.
 
 
 Lemma nfa_singleton_correct a b : 
-  nfa_lang (nfa_singleton a b) = [$ w | w =b= a~[]#b ].
+  nfa_lang (nfa_singleton a b) = [$ w | w =b= a~([])~b ].
 Proof.
   extensionality x. unfold nfa_lang, accept.
-  destruct (x =d= a~[]#b); subst; simpl.
+  destruct (x =d= a~([])~b); subst; simpl.
   + rewrite eqb_refl.
     destruct (a =d= a); destruct (b =d= b); congruence.
   + rewrite <- eqb_eq_false in n. rewrite n.
@@ -313,13 +325,13 @@ End nfa_seq.
 
 
 Definition residual a b L :=
-  [ b'~c#w | eqb b b' && a~b#(c::w) \in L ].
+  [ b'~c)~w | eqb b b' && a~b)~(c::w) \in L ].
 
 
 
 
 Definition star L := fix lstar gs :=
-  let 'a~b#w := gs in
+  let 'a~b)~w := gs in
   match w with
   | [] -> true
   | c::w -> \in residual a b 
