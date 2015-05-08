@@ -18,24 +18,24 @@ Axiom P_finite : Finite P.t.
 Global Instance : Finite P.t := P_finite.
 
 
-(** guarded strings **)
+
+
+
+
+(** guarded strings *******************************************)
 
 Inductive gs := GS : P.t -> list P.t -> P.t -> gs.
 Arguments GS a w b : rename.
 Hint Constructors gs.
 Notation "a ~ w # b" := (GS a w b) (at level 1, format
  "a ~ w # b").
+
 Global Program Instance : EqType gs := fun x y => match x,y with
   a~w#b,a'~w'#b' => if (a,w,b) =d= (a',w',b') then left _ else right _
 end.
 
 Parameters (a b : P.t) (w : list P.t).
 Check (a~w#b).
-
-(*
-Notation "[ a ~ b # w | B ]" := (fun s => let 'a~b#w := s in B)
-  (at level 0, a ident, b ident, w ident).
-*)
 
 Definition gs_length (gs : gs) :=
   let '_~w#_ := gs in length w.
@@ -45,9 +45,52 @@ Definition gs_conc (s1 s2 : gs) :=
   let 'b'~v#c := s2 in
   if b =d= b' then Some (a~w++v#c) else None.
 
-Definition gs_lang := (pred gs).
+Definition take (n:nat) (s:gs) (c : P.t) : gs :=
+  let 'a~w#b := s in
+  let w' := firstn n w in
+  a ~ w' # c.
 
-(** End guarded strings **)
+Definition drop (n:nat) (c : P.t) (s:gs) : gs :=
+  let 'a~w#b := s in
+  let w' := skipn n w in
+  c ~ w' # b.
+
+Theorem conc_take_drop (s: gs) (n : nat) c : 
+  gs_conc (take n s c) (drop n c s) = Some s.
+Proof.
+  gd s; destruct n; intros; destruct s as [a w b].
+  + simpl. destruct (c =d= c); intuition auto.
+  + simpl. destruct (c =d= c); intuition auto.
+    destruct w; intuition simpl.
+    rewrite firstn_skipn. reflexivity.
+Qed.
+
+(** End guarded strings #######################################*)
+
+
+
+
+
+
+(** languages over guarded strings *****************************)
+
+Definition gs_lang := gs -> bool.
+
+Definition gs_lang_union L1 L2 := [$ s : gs | s \in L1 || s \in L2 ].
+
+Definition gs_lang_conc L1 L2 :=
+
+
+
+
+
+
+(** End languages over guarded strings ########################*)
+
+
+
+
+
 
 
 
