@@ -80,7 +80,13 @@ Definition gs_lang_union L1 L2 := [$ s : gs | s \in L1 || s \in L2 ].
 Check existsb.
 
 Definition gs_lang_conc L1 L2 := [$ s : gs | [$ exists a | 
-  existsb (fun n => take n s a \in L1 && drop n a s \in L2) (seq 0 (gs_length s)) ] ].
+  existsb (fun n => take n s a \in L1 && drop n a s \in L2) (seq 0 (S (gs_length s))) ] ].
+
+Lemma firstn_app {X} (xs ys : list X) : firstn (length xs) (xs ++ ys) = xs.
+Proof. gd xs; gd ys; induction xs; intros; intuition simpl. congruence. Qed.
+
+Lemma skipn_app {X} (xs ys : list X) : skipn (length xs) (xs ++ ys) = ys.
+Proof. gd xs; gd ys; induction xs; intros; intuition simpl. Qed.
 
 Theorem lang_conc_correct L1 L2 s :
   (exists s1 s2, (Some s = gs_conc s1 s2) /\ (s1 \in L1 = true) /\ (s2 \in L2 = true))
@@ -90,12 +96,20 @@ Proof.
   + destruct H as [s1 [s2 [H0 [H1 H2]]]].
     destruct s1 as [a w b]; destruct s2 as [b' v c].
     simpl in H0. destruct (b =d= b'); invert H0.
-    simpl.
-
-
-
-
-
+    unfold gs_lang_conc. apply exists_iff. exists b'.
+    apply existsb_exists. exists (length w).
+    split.
+    - clear H1; clear H2; induction w; simpl; intuition auto.
+      simpl in IHw; destruct IHw; intuition auto.
+      repeat right. rewrite <- seq_shift. apply in_map. assumption.
+    - simpl. rewrite firstn_app; rewrite skipn_app.
+      rewrite H1; rewrite H2. auto.
+  + unfold gs_lang_conc in H; rewrite existsb_exists in H.
+    destruct H as [c [_ H]]. rewrite existsb_exists in H.
+    destruct H as [n [_ H]]. rewrite andb_true_iff in H.
+    exists (take n s c). exists (drop n c s).
+    intuition try fail. symmetry. apply conc_take_drop.
+Qed.
 
 (** End languages over guarded strings ########################*)
 
@@ -109,7 +123,7 @@ Proof.
 
 
 
-(** NFAs **)
+(** NFAs over guarded strings **)
 
 Record nfa := {
   nfa_state :> Type;
