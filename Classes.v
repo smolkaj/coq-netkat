@@ -50,13 +50,19 @@ Notation "x =b= y" := (eqb x y) (at level 70, no associativity, only parsing) : 
 Theorem eqb_eq `{EqType X} (x y : X) : eqb x y = true <-> x=y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
 
+Theorem eqb_eq' `{EqType X} (x y : X) : x=y <-> eqb x y = true.
+Proof. symmetry. apply eqb_eq. Qed.
+
 Theorem eqb_eq_false `{EqType X} (x y : X) : eqb x y = false <-> x<>y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. Qed.
+
+Theorem eqb_eq_false' `{EqType X} (x y : X) : x<>y <-> eqb x y = false.
+Proof. symmetry. apply eqb_eq_false. Qed.
 
 Theorem eqb_refl `{EqType X} (x : X) : eqb x x = true.
 Proof. apply eqb_eq. reflexivity. Qed.
 
-Hint Resolve eqb_eq eqb_eq_false eqb_refl.
+Hint Resolve eqb_eq' eqb_eq_false' eqb_refl.
 
 Global Instance : EqType bool := bool_dec.
 Global Instance : EqType nat := eq_nat_dec.
