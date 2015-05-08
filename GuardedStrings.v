@@ -437,14 +437,28 @@ end.
 
 
 Theorem netkat_nfa_correct (p : policy) a b w :
-  (| p |) (a,[]) (b,w) <-> (a~(w)~b \in nfa_lang (netkat_nfa p) = true).
+  (| p |) (a,[]) (b,w) <-> (a~(rev w)~b \in nfa_lang (netkat_nfa p) = true).
 Proof.
   split; intro H.
   + dependent induction H; unfold nfa_lang;
-    try solve [unfold accept; simpl; auto 2].
+    try solve [unfold accept; simpl; auto 2]; simpl.
     - unfold accept; simpl; auto. apply negb_true_iff.
-      apply eqb_eq.
-    -
+      apply eqb_eq_false'. assumption.
+    - assert (H0 := nfa_union_correct (netkat_nfa p) (netkat_nfa q)).
+      apply (f_equal (fun x => x (a~(w)~b))) in H0.
+      unfold nfa_lang in H0. simpl in H0. rewrite H0.
+      apply lang_union_correct. left. unfold nfa_lang in IHbstep.
+      apply IHbstep; auto.
+    - assert (H0 := nfa_union_correct (netkat_nfa p) (netkat_nfa q)).
+      apply (f_equal (fun x => x (a~(w)~b))) in H0.
+      unfold nfa_lang in H0. simpl in H0. rewrite H0.
+      apply lang_union_correct. right. unfold nfa_lang in IHbstep.
+      apply IHbstep; auto.
+    - assert (H1 := seq_correct (netkat_nfa p) (netkat_nfa q)).
+      apply (f_equal (fun x => x (a~(w)~b))) in H1.
+      unfold nfa_lang in H1. simpl in H1. rewrite H1.
+      apply lang_conc_correct. destruct h' as [b' w'].
+      exists a~w'~
 
 
 

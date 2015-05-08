@@ -13,9 +13,9 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Inductive bstep : policy -> H.t -> H.t -> Prop :=
   | BstepId : forall h, bstep Id h h
-  | BstepFilter : forall f v pk h, pk f = v -> bstep (Filter f v) (pk,h) (pk,h)
-  | BstepNFilter : forall f v pk h, pk f <> v -> bstep (NFilter f v) (pk,h) (pk,h)
-  | BstepMod : forall f v pk h, bstep (Mod f v) (pk,h) (pk[f:=v], h)
+  | BstepFilter : forall f v pk h, pk f = v -> bstep (f==v) (pk,h) (pk,h)
+  | BstepNFilter : forall f v pk h, pk f <> v -> bstep (f!=v) (pk,h) (pk,h)
+  | BstepMod : forall f v pk h, bstep (f<-v) (pk,h) (pk[f:=v], h)
   | BstepPlusLeft : forall h h' p q, bstep p h h' -> bstep (p+q) h h'
   | BstepPlusRight : forall h h' p q, bstep q h h' -> bstep (p+q) h h'
   | BstepSeq : forall h h' h'' p q, bstep p h h' -> bstep q h' h'' -> bstep (p;;q) h h''
@@ -26,7 +26,7 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
 
-  Lemma bstep_interpret : forall p h h', bstep p h h' -> interpret p h h'.
+  Lemma bstep_interpret : forall p h h',  (|p|) h h' -> [|p|] h h'.
   Proof.
     intros.
     induction H; simpl; try (simpl in H); auto.
@@ -43,7 +43,7 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
       exists (S n). simpl. exists h'. intuition.
   Qed.
 
-  Lemma interpret_bstep : forall p h h', interpret p h h' -> bstep p h h'.
+  Lemma interpret_bstep : forall p h h', [|p|] h h' -> (|p|) h h'.
   Proof.
     intros p.
     induction p; intros h h' H; destruct h as [pk h];
