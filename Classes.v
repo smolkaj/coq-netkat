@@ -56,7 +56,7 @@ Proof. unfold eqb. destruct (eq_dec x y); intuition. Qed.
 Theorem eqb_refl `{EqType X} (x : X) : eqb x x = true.
 Proof. apply eqb_eq. reflexivity. Qed.
 
-Hint Resolve eqb_eq eqb_eq_false.
+Hint Resolve eqb_eq eqb_eq_false eqb_refl.
 
 Global Instance : EqType bool := bool_dec.
 Global Instance : EqType nat := eq_nat_dec.

@@ -10,7 +10,7 @@ Fixpoint list_eqb {X : Type} (eqb : X -> X -> bool) (xs : list X) (ys : list X) 
 
 Lemma list_eqb_eq : forall {X : Type}, forall (eqb : X -> X -> bool),
   forall p : (forall x y : X, eqb x y = true <-> x = y),
-  forall l1 l2 : list X, list_eqb eqb l1 l2 = true <-> l1 = l2.
+  forall l1 l2 : list X, list_eqb  eqb l1 l2 = true <-> l1 = l2.
 Proof.
   intros X eqb p l1.
   induction l1; intros; destruct l2; intuition; try solve [inversion H].

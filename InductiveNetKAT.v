@@ -22,10 +22,9 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
   | BstepStarRefl : forall h p, bstep (p*) h h
   | BstepStarTrans : forall h h' h'' p, bstep p h h' -> bstep (p*) h' h'' -> bstep (p*) h h''
   | BstepDup : forall pk h, bstep Dup (pk,h) (pk,pk::h).
-
-  (* Notation "'[||' p '||]'" := (bstep p) (at level 1). *)
-
   Hint Constructors bstep.
+
+  Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
 
   Lemma bstep_interpret : forall p h h', bstep p h h' -> interpret p h h'.
   Proof.
@@ -362,68 +361,6 @@ Proof.
     eapply bstep_dup_free; eauto using A'_dup_free.
 Qed.
 
-Import ListNotations.
-Record state : Type := mkState {
-  e : H.t -> H.t -> Prop;
-  d : H.t -> H.t -> nat -> Prop
-}.
 
-Check state.
-
-Record nfa : Type := {
-  states : list state 
-}.
-
-Set Implicit Arguments.
-Definition shift (n:nat) :=
-  map (fun s => {| e:= s.(e);  d:= (fun x y m => s.(d) x y (m-n)) |}).
-Hint Unfold shift.
-
-Check Is_true.
-
-Definition closed (a : list state) := 
-  forall s, In s a -> forall x y n, s.(d) x y n -> n < length a.
-Hint Unfold closed.
-
-Require Import FunctionalExtensionality.
-
-Lemma shift0 : forall a, shift 0 a = a.
-Proof.
- intros.
- induction a; auto.
- simpl. rewrite IHa. f_equal.
- destruct a; f_equal; simpl.
- extensionality x; extensionality y; extensionality m.
- intuition.
-Qed.
-
-Hint Rewrite shift0.
-Hint Resolve shift0.
-
-Definition dummy := {| e := fun _ _ => False; d := fun _ _ _ => False |}.
-Hint Unfold dummy.
-
-
-Lemma cons_dummy : forall a, closed a -> closed(dummy :: shift 1 a).
-Proof.
-  intros.
-  unfold closed.
-  intros. invert H0.
-  + inversion H1.
-  + unfold shift in H2. rewrite in_map_iff in H2.
-    destruct H2 as [s']. destruct H2. rewrite <- H2 in H1; simpl in H1.
-    cut (n < length a). simpl.
-    admit. admit.
-Qed.
-
-Fixpoint automatize (p : policy) : list state :=
-match p with
-  | Dup => 
-      [ mkState (bstep Drop) (fun x y n => x=y /\ n=1) ;
-        mkState (bstep Id)   (fun _ _ _ => False) ]
-  | x => [ mkState (bstep x) (fun _ _ _ => False) ]
-end.
-
-Functional Scheme automatize_ind := Induction for automatize Sort Prop.
 
 End NetKAT'.

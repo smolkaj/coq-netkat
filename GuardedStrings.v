@@ -1,6 +1,6 @@
 Require Import List Coq.Program.Equality Bool Omega FunctionalExtensionality.
 Import ListNotations.
-Require Export NetKAT Sets Misc Classes.
+Require Export NetKAT InductiveNETKAT Sets Misc Classes.
 
 
 Ltac invert H := inversion H; subst; clear H.
@@ -9,13 +9,14 @@ Ltac gd id := generalize dependent id.
 
 
 Module GS (F : FIELDSPEC) (V : VALUESPEC(F)).
-Include NetKAT.NetKAT(F)(V).
+Include  InductiveNETKAT.NetKAT'(F)(V).
 
 (* For now, assume that the set of packets is finite as an axiom.
    This will follow automatically once we show that
    Finite X -> Finite Y -> Finite (X->Y).                        *)
 Axiom P_finite : Finite P.t.
 Global Instance : Finite P.t := P_finite.
+Global Instance value_eqtype (f : F.t) : EqType (V.t f) := (V.eq_dec f). 
 
 
 
@@ -193,14 +194,25 @@ Hint Unfold nfa_lang.
 
 (** primitive automata ****************************************************)
 
+(*
+
 Definition nfa_empty :=
   {| nfa_s := tt; nfa_accept q a b := false; nfa_trans q a b q' := false |}.
+
+Definition nfa_id :=
+  {| nfa_s := tt; nfa_accept q a b := (a =b= b); nfa_trans q a b q' := false |}. 
 
 Definition nfa_singleton a b :=
   {| nfa_s := tt; nfa_trans q a b q' := false;
      nfa_accept q a' b' := if a =d= a' then (if b =d= b' then true else false)
                            else false
   |}.
+
+Definition nfa_filter f :=
+  {| nfa_s := tt; nfa_accept q a b := f a; nfa_trans q a b q' := false |}.
+
+Definition nfa_mod m :=
+  {| nfa_s := tt; nfa_accept q a b := (b =b= m a); nfa_trans q a b q' := false |}.
 
 Lemma nfa_empty_correct : nfa_lang nfa_empty = pred0.
 Proof.
@@ -209,6 +221,15 @@ Proof.
   unfold accept; destruct s as [a [ |b w] c]; simpl; reflexivity.
 Qed.
 
+Lemma nfa_id_correct : nfa_lang nfa_id = [$ s | let 'a~(w)~b := s in (a =b= b) && (w =b= [])].
+Proof.
+  apply pred_eq_intro. intro s; destruct s as [a w b]; unfold nfa_lang.
+  rewrite <- accept_correct. rewrite andb_true_iff.
+  split; intro H; invert H.
+  + invert H1. intuition.
+  + invert H2.
+  + rewrite eqb_eq in H1. subst w. eauto.
+Qed.
 
 Lemma nfa_singleton_correct a b : 
   nfa_lang (nfa_singleton a b) = [$ w | w =b= a~([])~b ].
@@ -223,7 +244,32 @@ Proof.
     subst; rewrite eqb_refl in n. assumption.
 Qed.
 
+*)
 
+Definition nfa_pred p :=
+  {| nfa_s := tt; nfa_accept q a b := p a b; nfa_trans q a b q' := false |}.
+
+Lemma nfa_pred_correct p : 
+  nfa_lang (nfa_pred p) = [$ s | let 'a~(w)~b := s in (p a b) && (w =b= [])].
+Proof.
+  apply pred_eq_intro. intro s; destruct s as [a w b]; unfold nfa_lang.
+  rewrite <- accept_correct.
+  split; intro H; invert H; simpl in *; try apply andb_true_iff; intuition.
+  + rewrite andb_true_iff in H1. destruct H1 as [H0 H1]; rewrite eqb_eq in H1.
+    subst w. auto.
+Qed.
+
+
+
+Definition nfa_dup :=
+  {| nfa_s := false;
+     nfa_accept q a b := q && (a =b= a);
+     nfa_trans q a b q' :=  negb q && q' && (a =b= b) |}.
+
+Lemma nfa_dup_correct : 
+  nfa_lang nfa_dup = [$ s | let 'a~(w)~b := s in (a =b= b) && (w =b= [a])].
+Proof. admit. Qed.
+    
 
 
 
@@ -370,6 +416,35 @@ Qed.
 End nfa_seq.
 
 
+
+
+
+
+(* NetKAT to NFA ***************************************************************)
+
+Fixpoint netkat_nfa (p : policy) : nfa :=
+match p with
+  | Drop  => nfa_pred (fun _ _ => false)
+  | Id    => nfa_pred (fun _ _ => true)
+  | Dup   => nfa_dup
+  | f==n  => nfa_pred (fun p _ => (p f) =b= n)
+  | f!=n  => nfa_pred (fun p _ => negb ((p f) =b= n))
+  | f<-n  => nfa_pred (fun p p' => p' =b= p[f:=n])
+  | q+r   => nfa_union (netkat_nfa q) (netkat_nfa r)
+  | q;;r  => nfa_seq (netkat_nfa q) (netkat_nfa r)
+  | q*    => nfa_pred (fun _ _ => false)
+end.
+
+
+Theorem netkat_nfa_correct (p : policy) a b w :
+  (| p |) (a,[]) (b,w) <-> (a~(w)~b \in nfa_lang (netkat_nfa p) = true).
+Proof.
+  split; intro H.
+  + dependent induction H; unfold nfa_lang;
+    try solve [unfold accept; simpl; auto 2].
+    - unfold accept; simpl; auto. apply negb_true_iff.
+      apply eqb_eq.
+    -
 
 
 
