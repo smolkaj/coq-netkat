@@ -4,9 +4,10 @@ Require Import Omega FunctionalExtensionality.
 Require Import Misc.
 Import ListNotations.
 
-(* decidable sets as in ssreflect *)
+
+
+(* decidable sets *)
 Definition pred T := T -> bool.
-(* Identity Coercion fun_of_pred : pred >-> Funclass. *)
 
 Notation "x \in L" := (L x) (at level 30, L at next level, only parsing) : bool_scope.
 Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident) : bool_scope.
@@ -33,12 +34,11 @@ Qed.
 
 
 
+
+
+(** Section Equality_Type. ******************************************)
+
 Generalizable Variables X Y.
-
-
-
-
-(** Section Equality_Type. **)
 
 Class EqType (X : Type) : Type := eq_dec : forall x y : X, {x=y} + {x<>y}.
 
@@ -69,6 +69,7 @@ Global Instance : EqType nat := eq_nat_dec.
 Global Program Instance : EqType True := fun x y => match x,y with I,I => left _ end. 
 Global Program Instance : EqType False := fun x y => match x,y with end.
 Global Program Instance : EqType unit := fun x y =>  match x,y with tt,tt => left _ end.
+
 Global Program Instance option_EqType `{EqType X} : EqType (option X) := fun x y =>
 match x,y with 
   | None, None => left _
@@ -101,20 +102,34 @@ match xs, ys with
 end.
 
 
-Eval compute in eqb 
-  [(1,true);(2,false);(3,true)]
-  [(1,true);(2,false);(3,true)].
+
+
+
+(* Built-in equality vs boolean equality *)
+
+Eval compute in 
+  [(1,true);(2,false);(3,true)] = 
+  [(4,true);(2,false);(3,true)].
+
+Eval compute in  
+  [(1,true);(2,false);(3,true)] =b= 
+  [(4,true);(2,false);(3,true)].
+
+
 
 Definition test := (@eqb (list (prod bool nat)) _).
 Recursive Extraction test.
 
-(** End Equality_Type. **)
+(** End Equality_Type. #################################################*)
 
 
 
 
 
-(** Section Finite **)
+
+
+
+(** Section Finite *******************************************************)
 
 Class Finite (X : Type) : Type := enum : {xs: list X|forall x, In x xs}.
 
@@ -154,7 +169,9 @@ Next Obligation. destruct x; intuition (auto using in_map). Qed.
 
 
 
-(** Section Finite of list. **)
+
+
+(** Section Finite of list. ***********************************************************)
 
 Program Definition weaken {X} {xs: list X} x (y : {y|In y xs}) : {y|In y (x::xs)} := y.
 Program Fixpoint siglist {X} (xs : list X) : list {x:X|In x xs} :=
@@ -176,10 +193,14 @@ Next Obligation.
     apply in_map. auto.
 Defined.
 
-(** End Finite_Of_List. **)
+(** End Finite_Of_List. ########################################################**)
 
 
-(* decidable exists on finite types *)
+
+
+
+
+(* decidable exists on finite types **********************************************)
 
 Notation "[$ 'exists' x | B ]" := (existsb (fun x => B) (enum' _))
   (at level 0, x ident) : bool_scope.
@@ -222,14 +243,11 @@ Proof.
 Qed.
 Hint Resolve exists_iff.
 
-(** End Finite. **)
 
 
 
 
-
-
-
+(* Finite Functions ***************************************************************)
 
 Section Finite_Functions.
 
@@ -246,29 +264,18 @@ Next Obligation.
 Defined.
 Next Obligation. intro eq; apply H1; congruence. Defined.
 
-(*
+Axiom fun_fin : forall X Y, Finite X -> Finite Y -> Finite (X -> Y).
+Global Instance fun_fin_inst : forall X Y, Finite X -> Finite Y -> Finite (X->Y) := fun_fin.
 
-Definition functs `(Finite X) `(Finite Y) `{EqType X} : list(X->Y) :=
-  fold_left 
-    (fun fs x => flat_map (fun f => 
-      map (fun y x' => if eq_dec x x' then y else f x') (enum' Y)) fs)
-    (enum' X)
-    (map (fun y => fun _ => y) (enum' Y)).
+(** IDEA!!! 
+first prove that there is a bijection between pairs of lists and functions
+then prove that there are only finitely many lists
 
-Definition test `(Finite X) `(Finite Y) (y:Y) :=
-  (fun (x:X) => match x with end).
-
-Program Instance fun_finite `(px:Finite X) `(py:Finite Y) `{_:EqType X} `{_:EqType Y} 
-: Finite(X->Y) :=
-  functs px py.
-Next Obligation.
-  rename x into f.
-  unfold functs.
-  induction (enum' X); simpl in *.
-  functional induction
-  assert(xs := enum' X).
-  induction (xs).
-*)
+f : X -> Y  ===  (enum' X, map f (enum' X)).
+**)
 
 
 End Finite_Functions.
+
+
+(** End Finite. ######################################################################**)

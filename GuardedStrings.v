@@ -1,6 +1,6 @@
 Require Import List Coq.Program.Equality Bool Omega FunctionalExtensionality.
 Import ListNotations.
-Require Export NetKAT InductiveNETKAT Sets Misc Classes.
+Require Export NetKAT InductiveNETKAT Sets Misc Classes Recdef.
 
 
 Ltac invert H := inversion H; subst; clear H.
@@ -10,13 +10,15 @@ Ltac gd id := generalize dependent id.
 
 Module GS (F : FIELDSPEC) (V : VALUESPEC(F)).
 Include  InductiveNETKAT.NetKAT'(F)(V).
+Global Instance value_eqtype (f : F.t) : EqType (V.t f) := (V.eq_dec f).
+ 
 
 (* For now, assume that the set of packets is finite as an axiom.
    This will follow automatically once we show that
    Finite X -> Finite Y -> Finite (X->Y).                        *)
 Axiom P_finite : Finite P.t.
 Global Instance : Finite P.t := P_finite.
-Global Instance value_eqtype (f : F.t) : EqType (V.t f) := (V.eq_dec f). 
+
 
 
 
@@ -27,9 +29,13 @@ Global Instance value_eqtype (f : F.t) : EqType (V.t f) := (V.eq_dec f).
 
 (** guarded strings *******************************************)
 
-Inductive gs := GS : P.t -> list P.t -> P.t -> gs.
-Arguments GS a w b : rename.
+Inductive gs := 
+  | GS : P.t -> list P.t -> P.t -> gs.
+
 Hint Constructors gs.
+
+Arguments GS a w b : rename.
+
 Notation "a ~( w )~ b" := (GS a w b) (at level 1, format "a ~( w )~ b").
 
 Global Program Instance : EqType gs := fun x y => match x,y with
@@ -82,6 +88,9 @@ Qed.
 
 Definition gs_lang := gs -> bool.
 
+
+(** UNION ****)
+
 Definition gs_lang_union L1 L2 := [$ s : gs | s \in L1 || s \in L2 ].
 
 Theorem lang_union_correct L1 L2 s :
@@ -89,7 +98,8 @@ Theorem lang_union_correct L1 L2 s :
 Proof. rewrite <- orb_true_iff. unfold gs_lang_union. intuition. Qed.
 Hint Resolve lang_union_correct.
 
-Check existsb.
+
+(** CONC ****)
 
 Definition gs_lang_conc L1 L2 := [$ s : gs | [$ exists a | 
   existsb (fun n => take n s a \in L1 && drop n a s \in L2) (seq 0 (S (gs_length s))) ] ].
@@ -136,6 +146,11 @@ Hint Resolve lang_conc_correct.
 
 
 
+
+
+
+
+
 (** NFAs over guarded strings **********************************)
 
 Record nfa := {
@@ -147,30 +162,80 @@ Record nfa := {
   nfa_trans : nfa_state -> P.t -> P.t -> nfa_state -> bool
 }.
 
+
+
+(** PROBLEM: Need to provide proof of (Finite state) and (EqType state)
+    whenever we build an automaton
+**)
+   
+
+
+
+
 Global Instance nfa_is_finite (A : nfa) : Finite (nfa_state A) := nfa_finite A.
 Global Instance nfa_is_eqtype (A : nfa) : EqType (nfa_state A) := nfa_eqtype A.
+
 Arguments nfa_accept {A} q a b : rename.
 Arguments nfa_trans {A} q a b q' : rename.
+
+
+
+
+(* Convenient Notation : *)
+Parameter A : nfa.
+Parameter q : A.
+Check q.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Function accept {A : nfa} (q : A) gs {measure gs_length gs}:=
+match gs with
+  | a~([])~b => nfa_accept q a b
+  | a~(b::w)~c =>
+    [$ exists q' | nfa_trans q a b q' && accept q' b~(w)~c ]
+end.
+
+
+
+
+
 
 
 Fixpoint accept_n {A : nfa} (q : A) gs n :=
 match gs with
   | a~([])~b => nfa_accept q a b
   | a~(b::w)~c =>
-  match n with
-  | O => false
-  | S n => [$ exists q' | nfa_trans q a b q' && accept_n q' b~(w)~c n ]
-  end
+    match n with
+      | O => false
+      | S n => [$ exists q' | nfa_trans q a b q' && accept_n q' b~(w)~c n ]
+    end
 end.
 
 Definition accept {A : nfa} (q : A) gs := accept_n q gs (gs_length gs).
 Hint Unfold accept.
 
+
 Inductive accept_prop {A : nfa} (q : A) : gs -> Prop :=
-  | accept_atom : forall a b, nfa_accept q a b = true -> accept_prop q a~([])~b
-  | accept_trans : forall a b c w q', nfa_trans q a b q' = true -> accept_prop q' b~(w)~c -> 
-      accept_prop q a~(b::w)~c.
+  | accept_atom : forall a b, 
+      nfa_accept q a b = true -> accept_prop q a~([])~b
+  (* - - -  - - - - - - -  - - - - - - - - - - - - - - - - *)
+  | accept_trans : forall a b c w q',
+     nfa_trans q a b q' = true -> accept_prop q' b~(w)~c -> 
+        accept_prop q a~(b::w)~c.
+
 Hint Constructors accept_prop.
+
 
 Theorem accept_correct (A : nfa) (q : A) gs : accept_prop q gs <-> accept q gs = true.
 Proof.
@@ -247,7 +312,11 @@ Qed.
 *)
 
 Definition nfa_pred p :=
-  {| nfa_s := tt; nfa_accept q a b := p a b; nfa_trans q a b q' := false |}.
+  {| nfa_s := tt; 
+     nfa_accept q a b := p a b; 
+     nfa_trans q a b q' := false 
+  |}.
+
 
 Lemma nfa_pred_correct p : 
   nfa_lang (nfa_pred p) = [$ s | let 'a~(w)~b := s in (p a b) && (w =b= [])].
@@ -261,10 +330,12 @@ Qed.
 
 
 
+
 Definition nfa_dup :=
   {| nfa_s := false;
      nfa_accept q a b := q && (a =b= a);
      nfa_trans q a b q' :=  negb q && q' && (a =b= b) |}.
+
 
 Lemma nfa_dup_correct : 
   nfa_lang nfa_dup = [$ s | let 'a~(w)~b := s in (a =b= b) && (w =b= [a])].
@@ -425,7 +496,7 @@ End nfa_seq.
 Fixpoint netkat_nfa (p : policy) : nfa :=
 match p with
   | Drop  => nfa_pred (fun _ _ => false)
-  | Id    => nfa_pred (fun _ _ => true)
+  | Id    => nfa_pred (fun p p' => p =b= p')
   | Dup   => nfa_dup
   | f==n  => nfa_pred (fun p _ => (p f) =b= n)
   | f!=n  => nfa_pred (fun p _ => negb ((p f) =b= n))
@@ -434,6 +505,7 @@ match p with
   | q;;r  => nfa_seq (netkat_nfa q) (netkat_nfa r)
   | q*    => nfa_pred (fun _ _ => false)
 end.
+
 
 
 Theorem netkat_nfa_correct (p : policy) a b w :

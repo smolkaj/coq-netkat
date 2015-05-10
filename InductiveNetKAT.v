@@ -235,6 +235,19 @@ Proof.
   + apply ssteps_bstep.
 Qed.
 
+
+
+
+
+
+
+
+
+
+
+
+(*
+
 Definition A p (h h' : H.t) :=
   let (pk, h) := h in
   let (pk',_) := h' in
@@ -284,7 +297,7 @@ Inductive subt p : policy -> Prop :=
   | subt_plus_right : forall q r, subt p r -> subt p (q+r)
   | subt_seq_left : forall q r, subt p q -> subt p (q;;r)
   | subt_seq_right : forall q r, subt p r -> subt p (q;;r)
-  | subt_star : forall q, subt p q -> subt p (q*).
+  | subt_star : forall q, subt p q -> subt p (q* ).
 Hint Constructors subt.
 
 Lemma subt_iff : forall p q, subt p q <-> subt_fn p q.
@@ -351,7 +364,7 @@ Proof.
     - eapply IHp1. apply bstep_ssteps_iff in H.
       assert (h=h'') by eauto using A'_dup_free, ssteps_dup_free.
       subst; eauto.
-  + assert (bstep (A' (q *)) (pk, h) (pk', h')) by (simpl; assumption).
+  + assert (bstep (A' (q* )) (pk, h) (pk', h')) by (simpl; assumption).
     assert (h=h') by eauto using A'_dup_free, bstep_dup_free.
     subst h'; clear H0.
     dependent induction H; eauto. destruct h' as [pk'' h'].
@@ -361,6 +374,6 @@ Proof.
     eapply bstep_dup_free; eauto using A'_dup_free.
 Qed.
 
-
+*)
 
 End NetKAT'.

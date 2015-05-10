@@ -1,10 +1,17 @@
 Require Import List Bool.
 Import ListNotations.
 Require Import Relations Morphisms Equalities .
-Require Export Misc Field Value Packet History Sets.
+Require Export Classes Misc Field Value Packet History Sets.
 
 Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
+  Global Instance : EqType ( F.t ) := F.eq_dec.
+  Global Program Instance : Finite ( F.t ) := F.all.
+  Next Obligation. apply F.finite. Defined.
+
+  Global Instance v_eqtype : forall f : F.t, EqType (V.t f) := V.eq_dec.
+  Global Instance v_finite : forall f : F.t, Finite (V.t f). admit. Defined.
+  
   (** * Packets, Histories, and History Sets *)
   Module P := Packet.Packet(F)(V).
   Module H := History.History(F)(V)(P).
