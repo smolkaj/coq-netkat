@@ -13,6 +13,8 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
 Include NetKAT.NetKAT(F)(V).
   
 
+
+
 (** Big Step Semantics ***************************************************)
 
 Inductive bstep : policy -> H.t -> H.t -> Prop :=
@@ -124,14 +126,12 @@ Hint Constructors sstep.
 
 Lemma sstep_mono p pk h q pk' h' :
   sstep (p,(pk,h)) (q,(pk',h')) -> length h <= length h'.
-Proof.
-  intros. dependent induction H; simpl; eauto.
-Qed.
+Proof. intros. dependent induction H; simpl; eauto. Qed.
 
-Lemma sstep_progress :
-  forall p, (p=Id) \/ (p=Drop) \/ (forall h, exists r h', sstep (p,h) (r,h')).
+
+Lemma sstep_progress p :
+  (p=Id) \/ (p=Drop) \/ (forall h, exists r h', sstep (p,h) (r,h')).
 Proof.
-  intros.
   induction p; first [auto;fail | right;right;intro;destruct h as [pk h] ]; eauto.
   + destruct (V.eq_dec f (pk f) t); eauto.
   + destruct (V.eq_dec f (pk f) t); eauto.
@@ -140,12 +140,14 @@ Proof.
     destruct H' as [r]; destruct H as [h']; exists (r;;p2); exists h'; eauto.
 Qed.
 
+
 Inductive npower {A : Type} (R : relation A) : nat -> relation A :=
 | npower0 : forall x, npower R 0 x x
 | npowerS : forall n x y z, R x y -> npower R n y z -> npower R (S n) x z.
 Hint Constructors npower.
 
 Hint Constructors clos_refl_trans_1n.
+
 
 Lemma clos_trans_refl_nat :
   forall {A} R x y, clos_refl_trans_1n A R x y <-> exists n, npower R n x y.
@@ -159,14 +161,17 @@ Proof.
     dependent induction n; intros; invert H.
 Qed.
 
+
 Definition ssteps := clos_refl_trans_1n (prod policy H.t) sstep.
 Hint Unfold ssteps.
+
 
 Lemma clos_rt1n_trans : forall X R x y z, clos_refl_trans_1n X R x y ->
   clos_refl_trans_1n X R y z -> clos_refl_trans_1n X R x z.
 Proof. intros.
   apply clos_rt_rt1n; eapply rt_trans; eapply clos_rt1n_rt; eauto.
 Qed.
+
 
 Lemma ssteps_bstep : forall p h1 h2, ssteps (p,h1) (Id,h2) -> (|p|) h1 h2.
 Proof.
@@ -182,6 +187,7 @@ Proof.
   generalize dependent h2.
   dependent induction H1; intros; invert H0.
 Qed.
+
 
 Lemma ssteps_seq_assoc : forall p q r h1 h2,
   ssteps (p;;(q;;r), h1) (r, h2) -> ssteps (p;;q;;r, h1) (r, h2).
@@ -202,6 +208,7 @@ Proof.
     * invert H0.  
 Qed.
 
+
 Lemma bstep_ssteps : forall p q h1 h2, (|p|) h1 h2 -> ssteps (p;;q,h1) (q,h2).
 Proof.
   intros. generalize dependent q.
@@ -214,6 +221,7 @@ Proof.
     eright. apply sstep_Seq_progress. apply sstep_Star_unfold.
     apply ssteps_seq_assoc. eauto using clos_rt1n_trans.
 Qed.
+
 
 Lemma sstep_id_right : forall p h1 h2,
   ssteps (p;;Id, h1) (Id, h2) -> ssteps (p,h1) (Id,h2).
@@ -253,6 +261,7 @@ Proof.
       * invert H4. invert H0. invert H2.
 Qed.
 
+
 Corollary bstep_ssteps_iff : forall p h1 h2,
   (|p|) h1 h2 <-> ssteps (p,h1) (Id,h2).
 Proof.
@@ -270,7 +279,7 @@ Qed.
 
 
 
-
+(** Some unsuccessful attempts to define derivatives ********************************)
 
 (*
 
