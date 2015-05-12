@@ -1,5 +1,4 @@
 (** Packet Header Fields. *)
-
 Require Import List.
 
 Module Type FIELDSPEC.
@@ -7,5 +6,4 @@ Module Type FIELDSPEC.
   Parameter all : list t.
   Parameter finite: forall f:t, In f all.
   Parameter eq_dec : forall x y : t, { x=y } + { ~x=y }.
-  (* Parameter beq : F -> F -> bool. *)
 End FIELDSPEC.

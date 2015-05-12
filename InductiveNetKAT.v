@@ -1,10 +1,8 @@
-Require Export NetKAT Misc.
+Require Export NetKAT Misc Tactics.
 Require Import List Coq.Program.Equality Bool Omega.
 Require Import Relations Relations.Relation_Operators.
 Require Import Arith.Wf_nat.
 Import ListNotations.
-
-Ltac invert id := inversion id; try (subst); eauto.
 
 Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
 
@@ -62,6 +60,23 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
       + destruct H as [h'']. eapply BstepStarTrans; intuition eauto.
         destruct h'' as [pk'' h'']; intuition.
     Qed.
+
+Lemma bstep_prefix {p pk pk' h h'} : 
+  (|p|) (pk,h) (pk',h') -> exists h'', h' = h''++ h.
+Proof.
+  intro H.
+  dependent induction H;
+  try destruct h'0 as [pk'' h''];
+  solve [
+    eauto |
+    exists []; auto |
+    exists [pk']; auto |
+    assert(exists x, h'' = x ++ h) as H1 by eauto; destruct H1 as [x H1];
+    assert(exists y, h' = y ++ h'') as H2 by eauto; destruct H2 as [y H2];
+    exists (y++x); rewrite <- app_assoc; congruence
+  ].
+Qed.
+  
 
 
 Arguments V.eqb {f} _ _.
@@ -142,7 +157,7 @@ Proof. intros.
   apply clos_rt_rt1n; eapply rt_trans; eapply clos_rt1n_rt; eauto.
 Qed.
 
-Lemma ssteps_bstep : forall p h1 h2, ssteps (p,h1) (Id,h2) -> bstep p h1 h2.
+Lemma ssteps_bstep : forall p h1 h2, ssteps (p,h1) (Id,h2) -> (|p|) h1 h2.
 Proof.
   intros.
   unfold ssteps in H.
@@ -151,7 +166,7 @@ Proof.
   generalize dependent h2; generalize dependent h1; generalize dependent p.
   dependent induction n; intros; invert H.
   destruct y as [q h3].
-  assert (bstep q h3 h2) by intuition.
+  assert ( (|q|) h3 h2) by intuition.
   clear IHn H H2.
   generalize dependent h2.
   dependent induction H1; intros; invert H0.
@@ -176,7 +191,7 @@ Proof.
     * invert H0.  
 Qed.
 
-Lemma bstep_ssteps : forall p q h1 h2, bstep p h1 h2 -> ssteps (p;;q,h1) (q,h2).
+Lemma bstep_ssteps : forall p q h1 h2, (|p|) h1 h2 -> ssteps (p;;q,h1) (q,h2).
 Proof.
   intros. generalize dependent q.
   dependent induction H; intros; subst; eauto 7.
@@ -228,7 +243,7 @@ Proof.
 Qed.
 
 Corollary bstep_ssteps_iff : forall p h1 h2,
-  bstep p h1 h2 <-> ssteps (p,h1) (Id,h2).
+  (|p|) h1 h2 <-> ssteps (p,h1) (Id,h2).
 Proof.
   split.
   + intro H. apply sstep_id_right. apply bstep_ssteps. assumption.

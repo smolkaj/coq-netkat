@@ -1,14 +1,16 @@
 Require Import List Coq.Program.Equality Bool Omega FunctionalExtensionality.
 Import ListNotations.
-Require Export NetKAT InductiveNETKAT Sets Misc Classes Recdef.
-
+Require Export NetKAT InductiveNETKAT Sets Misc Classes Recdef Tactics.
 
 Ltac invert H := inversion H; subst; clear H.
-Ltac gd id := generalize dependent id.
 
 
+
+(** NetKAT language model.  ********************************************)
+(* See the original NetKAT paper *)
 
 Module GS (F : FIELDSPEC) (V : VALUESPEC(F)).
+
 Include  InductiveNETKAT.NetKAT'(F)(V).
 Global Instance value_eqtype (f : F.t) : EqType (V.t f) := (V.eq_dec f).
  
@@ -42,9 +44,6 @@ Global Program Instance : EqType gs := fun x y => match x,y with
   a~(w)~b, a'~(w')~b' => if (a,w,b) =d= (a',w',b') then left _ else right _
 end.
 
-Parameters (a b : P.t) (w : list P.t).
-Check (a~(w)~b).
-
 Definition gs_length (gs : gs) :=
   let '_~(w)~_ := gs in length w.
 
@@ -66,9 +65,9 @@ Definition drop (n:nat) (c : P.t) (s:gs) : gs :=
 Theorem conc_take_drop (s: gs) (n : nat) c : 
   gs_conc (take n s c) (drop n c s) = Some s.
 Proof.
-  gd s; destruct n; intros; destruct s as [a w b].
-  + simpl. destruct (c =d= c); intuition auto.
-  + simpl. destruct (c =d= c); intuition auto.
+  gd s; destruct n; intros; destruct s as [a w b]; simpl.
+  + if_case; intuition auto.
+  + if_case; intuition auto.
     destruct w; intuition simpl.
     rewrite firstn_skipn. reflexivity.
 Qed.
@@ -96,7 +95,7 @@ Definition gs_lang_union L1 L2 := [$ s : gs | s \in L1 || s \in L2 ].
 Theorem lang_union_correct L1 L2 s :
   (s \in L1 = true \/ s \in L2 = true) <-> s \in gs_lang_union L1 L2 = true.
 Proof. rewrite <- orb_true_iff. unfold gs_lang_union. intuition. Qed.
-Hint Resolve lang_union_correct.
+
 
 
 (** CONC ****)
@@ -130,9 +129,14 @@ Proof.
     destruct H as [c [_ H]]. rewrite existsb_exists in H.
     destruct H as [n [_ H]]. rewrite andb_true_iff in H.
     exists (take n s c). exists (drop n c s).
-    intuition try fail. symmetry. apply conc_take_drop.
+    intuition idtac. symmetry. apply conc_take_drop.
 Qed.
-Hint Resolve lang_conc_correct.
+
+
+(* missing: kleene star *)
+Parameter gs_lang_star : gs_lang -> gs_lang.
+
+
 
 (** End languages over guarded strings ########################*)
 
@@ -162,16 +166,6 @@ Record nfa := {
   nfa_trans : nfa_state -> P.t -> P.t -> nfa_state -> bool
 }.
 
-
-
-(** PROBLEM: Need to provide proof of (Finite state) and (EqType state)
-    whenever we build an automaton
-**)
-   
-
-
-
-
 Global Instance nfa_is_finite (A : nfa) : Finite (nfa_state A) := nfa_finite A.
 Global Instance nfa_is_eqtype (A : nfa) : EqType (nfa_state A) := nfa_eqtype A.
 
@@ -179,39 +173,8 @@ Arguments nfa_accept {A} q a b : rename.
 Arguments nfa_trans {A} q a b q' : rename.
 
 
-
-
-(* Convenient Notation : *)
-Parameter A : nfa.
-Parameter q : A.
-Check q.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Function accept {A : nfa} (q : A) gs {measure gs_length gs}:=
-match gs with
-  | a~([])~b => nfa_accept q a b
-  | a~(b::w)~c =>
-    [$ exists q' | nfa_trans q a b q' && accept q' b~(w)~c ]
-end.
-
-
-
-
-
-
-
+(* We must define acceptance with "fuel" n as otherwise Coq cannot be convinced
+   that accept terminates. *)
 Fixpoint accept_n {A : nfa} (q : A) gs n :=
 match gs with
   | a~([])~b => nfa_accept q a b
@@ -324,22 +287,32 @@ Proof.
   apply pred_eq_intro. intro s; destruct s as [a w b]; unfold nfa_lang.
   rewrite <- accept_correct.
   split; intro H; invert H; simpl in *; try apply andb_true_iff; intuition.
-  + rewrite andb_true_iff in H1. destruct H1 as [H0 H1]; rewrite eqb_eq in H1.
-    subst w. auto.
+  rewrite andb_true_iff in H1. destruct H1 as [H0 H1]; rewrite eqb_eq in H1.
+  subst w. auto.
 Qed.
-
 
 
 
 Definition nfa_dup :=
   {| nfa_s := false;
-     nfa_accept q a b := q && (a =b= a);
-     nfa_trans q a b q' :=  negb q && q' && (a =b= b) |}.
+     nfa_accept q a b := q && (a =b= b);
+     nfa_trans q a b q' :=  (negb q) && q' && (a =b= b) |}.
 
 
 Lemma nfa_dup_correct : 
   nfa_lang nfa_dup = [$ s | let 'a~(w)~b := s in (a =b= b) && (w =b= [a])].
-Proof. admit. Qed.
+Proof. 
+  apply pred_eq_intro; intro s; destruct s as [a w b]; unfold nfa_lang;
+  rewrite <- accept_correct; split; intro H.
+  + apply andb_true_iff. repeat rewrite eqb_eq. invert H. invert H1.
+    invert H2. invert H4. invert H1.
+    rewrite andb_true_iff in *. rewrite eqb_eq in H0; rewrite eqb_eq in H2.
+    intuition congruence. invert H2. repeat rewrite andb_true_iff in *.
+    destruct H0 as [H0 _]; destruct H1 as [[H1 _] _]. subst q'.
+    invert H1.
+  + apply andb_true_iff in H; repeat rewrite eqb_eq in H; destruct H as [H1 H2]; subst.
+    right with (q':=true); simpl. apply eqb_refl. left. simpl. apply eqb_refl.
+Qed.
     
 
 
@@ -471,11 +444,23 @@ Qed.
 
 Lemma seq_inl A1 A2 q s :
   (exists s1 s2, Some s = gs_conc s1 s2 /\ accept_prop q s1
-                                        /\ s2 \in nfa_lang A2 = true) 
+                                        /\ accept_prop (nfa_s A2) s2) 
   <-> (@accept (nfa_seq A1 A2) (inl q) s = true).
-Proof. admit. Qed.
+Proof.
+  split; intro H.
+  + destruct H as [s1 [s2 [H1 [H2 H3]]]].
+    apply accept_correct. induction H2.
+    - rewrite <- conc_take_drop with (n:=0) (c:=b) in H1.
+      destruct s as [a' v c]; destruct s2 as [b' w' c'].
+      simpl in H1. destruct (b =d= b); destruct (b =d= b'); invert H1; try congruence.
+      invert H3.
+      * left. simpl. apply exists_iff. exists b'. intuition.
+      * admit.
+   - admit.
+ + admit.
+Qed.
 
-Lemma seq_correct A1 A2 :
+Lemma nfa_seq_correct A1 A2 :
   nfa_lang (nfa_seq A1 A2) = gs_lang_conc (nfa_lang A1) (nfa_lang A2).
 Proof. 
   apply pred_eq_intro. intro gs. rewrite <- lang_conc_correct.
@@ -491,6 +476,16 @@ End nfa_seq.
 
 
 
+
+(** nfa_star *****************************************************************************)
+(* TO BE IMPLEMENTED *)
+
+Parameter nfa_star : nfa -> nfa.
+
+
+
+
+
 (* NetKAT to NFA ***************************************************************)
 
 Fixpoint netkat_nfa (p : policy) : nfa :=
@@ -498,39 +493,52 @@ match p with
   | Drop  => nfa_pred (fun _ _ => false)
   | Id    => nfa_pred (fun p p' => p =b= p')
   | Dup   => nfa_dup
-  | f==n  => nfa_pred (fun p _ => (p f) =b= n)
-  | f!=n  => nfa_pred (fun p _ => negb ((p f) =b= n))
+  | f==n  => nfa_pred (fun p p' => (p =b= p') && ((p f) =b= n))
+  | f!=n  => nfa_pred (fun p p' => (p =b= p') && ((p f) <b> n))
   | f<-n  => nfa_pred (fun p p' => p' =b= p[f:=n])
   | q+r   => nfa_union (netkat_nfa q) (netkat_nfa r)
   | q;;r  => nfa_seq (netkat_nfa q) (netkat_nfa r)
-  | q*    => nfa_pred (fun _ _ => false)
+  | q*    => nfa_star (netkat_nfa q)
 end.
 
 
-
-Theorem netkat_nfa_correct (p : policy) a b w :
-  (| p |) (a,[]) (b,w) <-> (a~(rev w)~b \in nfa_lang (netkat_nfa p) = true).
+Theorem netkat_nfa_correct (p : policy) a b v w :
+  (| p |) (a,v) (b,w++v) <-> (a~(rev w)~b \in nfa_lang (netkat_nfa p) = true).
 Proof.
   split; intro H.
-  + dependent induction H; unfold nfa_lang;
-    try solve [unfold accept; simpl; auto 2]; simpl.
-    - unfold accept; simpl; auto. apply negb_true_iff.
-      apply eqb_eq_false'. assumption.
-    - assert (H0 := nfa_union_correct (netkat_nfa p) (netkat_nfa q)).
-      apply (f_equal (fun x => x (a~(w)~b))) in H0.
-      unfold nfa_lang in H0. simpl in H0. rewrite H0.
-      apply lang_union_correct. left. unfold nfa_lang in IHbstep.
-      apply IHbstep; auto.
-    - assert (H0 := nfa_union_correct (netkat_nfa p) (netkat_nfa q)).
-      apply (f_equal (fun x => x (a~(w)~b))) in H0.
-      unfold nfa_lang in H0. simpl in H0. rewrite H0.
-      apply lang_union_correct. right. unfold nfa_lang in IHbstep.
-      apply IHbstep; auto.
-    - assert (H1 := seq_correct (netkat_nfa p) (netkat_nfa q)).
-      apply (f_equal (fun x => x (a~(w)~b))) in H1.
-      unfold nfa_lang in H1. simpl in H1. rewrite H1.
-      apply lang_conc_correct. destruct h' as [b' w'].
-      exists a~w'~
+  + dependent induction H; simpl;
+    try (symmetry in x; rewrite <- app_nil_l in x; apply app_inv_tail in x; subst w);
+    first [rewrite nfa_pred_correct | rewrite nfa_dup_correct | 
+           rewrite nfa_union_correct; apply lang_union_correct |
+           rewrite nfa_seq_correct; apply lang_conc_correct | idtac];
+    repeat rewrite andb_true_iff; repeat split; eauto 3.
+    - unfold neqb; if_case; auto.
+    - destruct h' as [c u']. destruct (bstep_prefix H) as [u H1]. subst u'.
+      destruct (bstep_prefix H0) as [u' H1]. rewrite app_assoc in H1.
+      assert (w=u'++u) by eauto using app_inv_tail. subst w. clear H1.
+      rewrite rev_app_distr. exists (a~(rev u)~c); exists (c~(rev u')~b).
+      simpl. rewrite <- app_assoc in IHbstep2. if_case; intuition eauto 2.
+    - (* star case 1 *) admit.
+    - (* star case 2 *) admit.
+    - replace w with [b]. intuition.
+      apply app_inv_tail with (l:=v). auto.
+  + gd a; gd b; gd v; gd w; induction p; intros; simpl in *;
+    first [rewrite nfa_pred_correct in H | rewrite nfa_dup_correct in H | 
+           rewrite nfa_union_correct in H; apply lang_union_correct in H |
+           rewrite nfa_seq_correct in H; apply lang_conc_correct in H | idtac];
+    repeat rewrite andb_true_iff in *; repeat rewrite eqb_eq in H; intuition;
+    try (assert (w=[]) by auto using rev_eq_nil; subst; simpl; eauto).
+    - unfold neqb in H2; destruct (b f =d= t); auto. inversion H2.
+    - destruct H as [[a' v' c] [[c' u' b'] [H1 [H2 H3]]]].
+      unfold gs_conc in H1. destruct (c =d= c'); inversion H1. subst c' a' b'.
+      apply (f_equal (@rev P.t)) in H4. rewrite rev_involutive in H4. subst w.
+      rewrite <- (rev_involutive v') in H2.
+      rewrite <- (rev_involutive u') in H3.
+      rewrite rev_app_distr. rewrite <- app_assoc.
+      econstructor; eauto.
+    - (* star case *) admit.
+    - subst b; assert (w=[a]) by auto using rev_eq_singleton; subst; simpl; eauto.
+Qed.
 
 
 

@@ -1,4 +1,5 @@
 Require Import List.
+Import ListNotations.
 
 
 Fixpoint list_eqb {X : Type} (eqb : X -> X -> bool) (xs : list X) (ys : list X) : bool :=
@@ -33,4 +34,18 @@ Proof.
     simpl in H; destruct (eq_dec x y); auto; inversion H.
   + assert (H' := list_eqb_eq eqb H xs ys).
     destruct (list_eqb eqb xs ys); [left|right]; intuition.
+Qed.
+
+Lemma rev_eq_nil {X} {xs : list X} : rev xs = [] -> xs = [].
+Proof.
+  intro H. destruct xs. reflexivity.
+  assert(length (@nil X) = length (x::xs)). rewrite <- H. apply rev_length.
+  inversion H0.
+Qed.
+
+Lemma rev_eq_singleton {X} {xs : list X} {x} : rev xs = [x] -> xs = [x].
+Proof.
+  intro H. destruct xs as [ |y[ |z xs]]. inversion H. simpl in H. assumption.
+  assert(length ([x]) = length (y::z::xs)). rewrite <- H. apply rev_length.
+  inversion H0.
 Qed.

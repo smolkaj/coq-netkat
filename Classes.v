@@ -43,15 +43,17 @@ Generalizable Variables X Y.
 Class EqType (X : Type) : Type := eq_dec : forall x y : X, {x=y} + {x<>y}.
 
 Definition eqb `{EqType X} (x y : X) := if eq_dec x y then true else false.
+Definition neqb `{EqType X} (x y : X) := if eq_dec x y then false else true.
 
 Notation "x =d= y" := (eq_dec x y) (at level 70, no associativity) : bool_scope.
 Notation "x =b= y" := (eqb x y) (at level 70, no associativity, only parsing) : bool_scope.
+Notation "x <b> y" := (neqb x y) (at level 70, no associativity, only parsing) : bool_scope.
 
 Theorem eqb_eq `{EqType X} (x y : X) : eqb x y = true <-> x=y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
 
-Theorem eqb_eq' `{EqType X} (x y : X) : x=y <-> eqb x y = true.
-Proof. symmetry. apply eqb_eq. Qed.
+Theorem eqb_eq' `{EqType X} (x y : X) : eqb x y = true -> x=y.
+Proof. rewrite eqb_eq. auto. Qed.
 
 Theorem eqb_eq_false `{EqType X} (x y : X) : eqb x y = false <-> x<>y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. Qed.
