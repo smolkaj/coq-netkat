@@ -1,12 +1,11 @@
-Require Import Field.
-Require Import List.
+(** Packet Header Values. *)
+Require Import Field List Classes.
 Import ListNotations.
 
 Module Type VALUESPEC (Import F : FIELDSPEC).
   Parameter t : F.t -> Set.
-  Parameter eqb : forall f : F.t, t f -> t f -> bool.
-  Parameter eqb_eq : forall f : F.t, forall x y : t f,
-    eqb f x y = true <-> x = y.
-  Parameter eq_dec : forall f : F.t, forall x y : t f,
-    {x=y} + {x<>y}.
+  Parameter finite : forall f, Finite (t f).
+  Parameter eq_dec : forall f : F.t, EqType (t f).
+  Global Instance is_finite : forall f, Finite (t f) := finite.
+  Global Instance is_eqtype : forall f, EqType (t f) := eq_dec.
 End VALUESPEC.

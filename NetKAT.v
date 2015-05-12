@@ -1,6 +1,5 @@
-Require Import List Bool.
+Require Import List Bool Relations Morphisms Equalities.
 Import ListNotations.
-Require Import Relations Morphisms Equalities .
 Require Export Classes Misc Field Value Packet History Sets.
 
 Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).

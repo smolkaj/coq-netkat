@@ -45,9 +45,25 @@ Class EqType (X : Type) : Type := eq_dec : forall x y : X, {x=y} + {x<>y}.
 Definition eqb `{EqType X} (x y : X) := if eq_dec x y then true else false.
 Definition neqb `{EqType X} (x y : X) := if eq_dec x y then false else true.
 
-Notation "x =d= y" := (eq_dec x y) (at level 70, no associativity) : bool_scope.
-Notation "x =b= y" := (eqb x y) (at level 70, no associativity, only parsing) : bool_scope.
-Notation "x <b> y" := (neqb x y) (at level 70, no associativity, only parsing) : bool_scope.
+
+Notation "x =d= y :> T" := (@eq_dec T _ x y)
+  (at level 70, y at next level, no associativity) : bool_scope.
+
+Notation "x =b= y :> T" := (@eqb T _ x y)
+  (at level 70, y at next level, no associativity, only parsing) : bool_scope.
+
+Notation "x <b> y :> T" := (@neqb T _ x y)
+  (at level 70, y at next level, no associativity, only parsing) : bool_scope.
+
+Notation "x =d= y" := (eq_dec x y)
+  (at level 70, no associativity) : bool_scope.
+
+Notation "x =b= y" := (eqb x y)
+  (at level 70, no associativity, only parsing) : bool_scope.
+
+Notation "x <b> y" := (neqb x y) 
+  (at level 70, no associativity, only parsing) : bool_scope.
+
 
 Theorem eqb_eq `{EqType X} (x y : X) : eqb x y = true <-> x=y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
@@ -268,6 +284,16 @@ Next Obligation. intro eq; apply H1; congruence. Defined.
 
 Axiom fun_fin : forall X Y, Finite X -> Finite Y -> Finite (X -> Y).
 Global Instance fun_fin_inst : forall X Y, Finite X -> Finite Y -> Finite (X->Y) := fun_fin.
+
+
+Axiom eq_dec_dep_f : forall X Y, Finite X -> (forall x:X, EqType(Y x)) -> EqType(forall x : X, Y x).
+Global Instance dep_fun_EqType `(Finite X) `(forall x:X, EqType(Y x)) : EqType (forall x:X, Y x) :=
+  eq_dec_dep_f _ _ _ _.
+
+Axiom dep_fun_fin : forall X Y, Finite X -> (forall x:X, Finite (Y x)) -> Finite (forall x:X, Y x).
+Global Instance dep_fun_fin_inst `(Finite X) `(forall x:X, Finite(Y x)) : Finite (forall x:X, Y x) := 
+  dep_fun_fin _ _ _ _.
+
 
 (** IDEA!!! 
 first prove that there is a bijection between pairs of lists and functions

@@ -1,9 +1,10 @@
 (** Packet Header Fields. *)
-Require Import List.
+Require Import List Classes.
 
 Module Type FIELDSPEC.
   Parameter t : Set. (* Set of fields *)
-  Parameter all : list t.
-  Parameter finite: forall f:t, In f all.
-  Parameter eq_dec : forall x y : t, { x=y } + { ~x=y }.
+  Parameter finite : Finite t.
+  Parameter eq_dec : EqType t.
+  Global Instance : Finite t := finite.
+  Global Instance : EqType t := eq_dec.
 End FIELDSPEC.
