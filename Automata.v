@@ -1,6 +1,8 @@
-Require Import List Coq.Program.Equality Bool Omega FunctionalExtensionality.
+(** NetKAT Automata & Language Theory *)
+
+Require Import List Coq.Program.Equality Bool Omega FunctionalExtensionality Recdef.
 Import ListNotations.
-Require Export NetKAT InductiveNETKAT Sets Misc Classes Recdef Tactics.
+Require Export NetKAT InductiveNETKAT Sets Misc Classes Tactics.
 
 Ltac invert H := inversion H; subst; clear H.
 
@@ -9,7 +11,7 @@ Ltac invert H := inversion H; subst; clear H.
 (** NetKAT language model.  ********************************************)
 (* See the original NetKAT paper *)
 
-Module GS (F : FIELDSPEC) (V : VALUESPEC(F)).
+Module Automata (F : FIELDSPEC) (V : VALUESPEC(F)).
 
 Include  InductiveNETKAT.NetKAT(F)(V).
 
@@ -419,6 +421,7 @@ Parameter nfa_star : nfa -> nfa.
 
 
 
+
 (* NetKAT to NFA ***************************************************************)
 (* this is Thompson's construction for NetKAT *)
 
@@ -476,4 +479,4 @@ Qed.
 
 
 
-End GS.
+End Automata.

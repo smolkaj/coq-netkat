@@ -4,9 +4,6 @@ Import ListNotations.
 
 
 
-
-
-
 (** Section Equality Type. ******************************************)
 
 Generalizable Variables X Y.
@@ -125,6 +122,7 @@ Definition test := (@eqb (list (prod bool nat)) _).
 Recursive Extraction test.
 
 (** End Equality_Type. #################################################*)
+
 
 
 
