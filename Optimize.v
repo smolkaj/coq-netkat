@@ -1,3 +1,6 @@
+(** Simple Policy Optimizer based on Smart Constructors.
+    This example nicely illustrates fully automatic axiomatic reasoning *)
+
 Require Export NetKAT.
 
 Module Optimize (F : FIELDSPEC) (V : VALUESPEC(F)).
@@ -94,8 +97,6 @@ Hint Rewrite mk_union_sound mk_seq_sound mk_star_sound : netkat.
 
 Theorem optimize_sound p: optimize p === p.
 Proof. netkat_induction p. Qed.
-
-Print optimize_sound.
 
 
 End Optimize.

@@ -1,15 +1,21 @@
+(** Inductive NetKAT semantics. Big Step and Small Step. *)
+
 Require Export NetKAT Misc Tactics.
 Require Import List Coq.Program.Equality Bool Omega.
 Require Import Relations Relations.Relation_Operators.
 Require Import Arith.Wf_nat.
 Import ListNotations.
 
+
+
 Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
 
-  Include NetKAT.NetKAT(F)(V).
+Include NetKAT.NetKAT(F)(V).
   
 
-  Inductive bstep : policy -> H.t -> H.t -> Prop :=
+(** Big Step Semantics ***************************************************)
+
+Inductive bstep : policy -> H.t -> H.t -> Prop :=
   | BstepId : forall h, bstep Id h h
   | BstepFilter : forall f v pk h, pk f = v -> bstep (f==v) (pk,h) (pk,h)
   | BstepNFilter : forall f v pk h, pk f <> v -> bstep (f!=v) (pk,h) (pk,h)
@@ -20,46 +26,47 @@ Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
   | BstepStarRefl : forall h p, bstep (p*) h h
   | BstepStarTrans : forall h h' h'' p, bstep p h h' -> bstep (p*) h' h'' -> bstep (p*) h h''
   | BstepDup : forall pk h, bstep Dup (pk,h) (pk,pk::h).
-  Hint Constructors bstep.
+Hint Constructors bstep.
 
-  Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
+Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
 
-  Lemma bstep_interpret : forall p h h',  (|p|) h h' -> [|p|] h h'.
-  Proof.
-    intros.
-    induction H; simpl; try (simpl in H); auto.
-    - rewrite <- V.eqb_eq in H.
-      rewrite -> H. auto.
-    - rewrite <- V.eqb_eq in H.
-      rewrite if_negb.
-      case (V.eqb f (pk f) v) eqn:H'; eauto.
-    - left; assumption.
-    - right; assumption.
-    - exists h'. intuition.
-    - exists 0; simpl; auto.
-    - destruct IHbstep2 as [n].
-      exists (S n). simpl. exists h'. intuition.
-  Qed.
 
-  Lemma interpret_bstep : forall p h h', [|p|] h h' -> (|p|) h h'.
-  Proof.
-    intros p.
-    induction p; intros h h' H; destruct h as [pk h];
-    simpl in H; try (unfold empty in H); try (unfold singleton in H);
-    try (subst h'; constructor); intuition.
-    - case (V.eqb f (pk f) t) eqn: H'; intuition.
-      rewrite V.eqb_eq in H'. subst h'. auto.
-    - case (V.eqb f (pk f) t) eqn: H'; simpl in H; intuition.
-      + subst h'. constructor. simpl. rewrite <- V.eqb_eq. intuition. congruence.
-    - destruct H; [apply BstepPlusLeft|apply BstepPlusRight]; intuition.
-    - destruct H as [h'']. eapply BstepSeq; intuition eauto.
-    - destruct H as [n].
-      generalize dependent pk; generalize dependent h; generalize dependent h';
-      induction n; intros h' h pk H; simpl in H.
-      + unfold singleton in H. subst h'. constructor.
-      + destruct H as [h'']. eapply BstepStarTrans; intuition eauto.
-        destruct h'' as [pk'' h'']; intuition.
-    Qed.
+Lemma bstep_interpret p h h' : (|p|) h h' -> [|p|] h h'.
+Proof.
+  intros.
+  induction H; simpl; try (simpl in H); auto.
+  - rewrite <- V.eqb_eq in H.
+    rewrite -> H. auto.
+  - rewrite <- V.eqb_eq in H.
+    rewrite if_negb.
+    case (V.eqb f (pk f) v) eqn:H'; eauto.
+  - left; assumption.
+  - right; assumption.
+  - exists h'. intuition.
+  - exists 0; simpl; auto.
+  - destruct IHbstep2 as [n].
+    exists (S n). simpl. exists h'. intuition.
+Qed.
+
+
+Lemma interpret_bstep p h h' : [|p|] h h' -> (|p|) h h'.
+Proof.
+  gd h'; gd h; induction p; intros h h' H; destruct h as [pk h];
+  simpl in H; try (unfold empty in H); try (unfold singleton in H);
+  try (subst h'; constructor); intuition.
+  - case (V.eqb f (pk f) t) eqn: H'; intuition.
+    rewrite V.eqb_eq in H'. subst h'. auto.
+  - case (V.eqb f (pk f) t) eqn: H'; simpl in H; intuition.
+    + subst h'. constructor. simpl. rewrite <- V.eqb_eq. intuition. congruence.
+  - destruct H; [apply BstepPlusLeft|apply BstepPlusRight]; intuition.
+  - destruct H as [h'']. eapply BstepSeq; intuition eauto.
+  - destruct H as [n].
+    gd pk; gd h; gd h'; induction n; intros h' h pk H; simpl in H.
+    + unfold singleton in H. subst h'. constructor.
+    + destruct H as [h'']. eapply BstepStarTrans; intuition eauto.
+      destruct h'' as [pk'' h'']; intuition.
+Qed.
+
 
 Lemma bstep_prefix {p pk pk' h h'} : 
   (|p|) (pk,h) (pk',h') -> exists h'', h' = h''++ h.
@@ -79,7 +86,10 @@ Qed.
   
 
 
-Arguments V.eqb {f} _ _.
+
+
+
+(** Small Step Semantics ***************************************************)
 
 Inductive sstep : prod policy H.t -> prod policy H.t -> Prop :=
 | sstep_Filter_pass :
@@ -111,7 +121,8 @@ Inductive sstep : prod policy H.t -> prod policy H.t -> Prop :=
 
 Hint Constructors sstep.
 
-Lemma sstep_mono : forall p pk h q pk' h',
+
+Lemma sstep_mono p pk h q pk' h' :
   sstep (p,(pk,h)) (q,(pk',h')) -> length h <= length h'.
 Proof.
   intros. dependent induction H; simpl; eauto.

@@ -10,8 +10,8 @@ Import ListNotations.
 Definition pred T := T -> bool.
 
 Notation "x \in L" := (L x) (at level 30, L at next level, only parsing) : bool_scope.
-Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident) : bool_scope.
-Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident) : bool_scope.
+Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident, only parsing) : bool_scope.
+Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident, only parsing) : bool_scope.
 
 
 Notation pred0 := [$ _ | false ].

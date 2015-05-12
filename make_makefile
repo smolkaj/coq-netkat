@@ -1,1 +1,3 @@
-coq_makefile Misc.v Classes.v Sets.v Field.v Value.v Packet.v History.v NetKAT.v Optimize.v Instantiation.v InductiveNETKAT.v -o Makefile
+coq_makefile Misc.v Tactics.v Classes.v Sets.v Field.v Value.v Packet.v \
+History.v NetKAT.v Optimize.v InductiveNETKAT.v GuardedStrings.v \
+Instantiation.v -o Makefile
