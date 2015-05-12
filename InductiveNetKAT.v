@@ -1,14 +1,13 @@
 (** Inductive NetKAT semantics. Big Step and Small Step. *)
 
 Require Export NetKAT Misc Tactics.
-Require Import List Coq.Program.Equality Bool Omega.
-Require Import Relations Relations.Relation_Operators.
-Require Import Arith.Wf_nat.
+Require Import List Coq.Program.Equality Bool Omega 
+  Relations Relations.Relation_Operators Arith.Wf_nat.
 Import ListNotations.
 
 
 
-Module NetKAT' (F : FIELDSPEC) (V : VALUESPEC(F)).
+Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
 Include NetKAT.NetKAT(F)(V).
   
@@ -36,12 +35,7 @@ Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
 Lemma bstep_interpret p h h' : (|p|) h h' -> [|p|] h h'.
 Proof.
   intros.
-  induction H; simpl; try (simpl in H); auto.
-  - rewrite <- V.eqb_eq in H.
-    rewrite -> H. auto.
-  - rewrite <- V.eqb_eq in H.
-    rewrite if_negb.
-    case (V.eqb f (pk f) v) eqn:H'; eauto.
+  induction H; simpl; try (simpl in H); try if_case; auto.
   - left; assumption.
   - right; assumption.
   - exists h'. intuition.
@@ -56,10 +50,8 @@ Proof.
   gd h'; gd h; induction p; intros h h' H; destruct h as [pk h];
   simpl in H; try (unfold empty in H); try (unfold singleton in H);
   try (subst h'; constructor); intuition.
-  - case (V.eqb f (pk f) t) eqn: H'; intuition.
-    rewrite V.eqb_eq in H'. subst h'. auto.
-  - case (V.eqb f (pk f) t) eqn: H'; simpl in H; intuition.
-    + subst h'. constructor. simpl. rewrite <- V.eqb_eq. intuition. congruence.
+  - destruct (t =d= pk f); try subst h'; intuition.
+  - destruct (t =d= pk f); simpl in H; try subst h'; intuition.
   - destruct H; [apply BstepPlusLeft|apply BstepPlusRight]; intuition.
   - destruct H as [h'']. eapply BstepSeq; intuition eauto.
   - destruct H as [n].
@@ -411,4 +403,4 @@ Qed.
 
 *)
 
-End NetKAT'.
+End NetKAT.

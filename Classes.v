@@ -1,42 +1,13 @@
-Require Import List Bool Arith Setoid Morphisms.
-Require Import Relations Morphisms.
-Require Import Omega FunctionalExtensionality.
-Require Import Misc.
+Require Import List Bool Arith Setoid Relations Morphisms Omega FunctionalExtensionality
+  Sumbool Misc.
 Import ListNotations.
 
 
 
-(* decidable sets *)
-Definition pred T := T -> bool.
-
-Notation "x \in L" := (L x) (at level 30, L at next level, only parsing) : bool_scope.
-Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident, only parsing) : bool_scope.
-Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident, only parsing) : bool_scope.
-
-
-Notation pred0 := [$ _ | false ].
-Notation pred1 := [$ _ | true ].
-(*
-Notation predI := (fun (p1 p2 : pred _) x => p1 x && p2 x).
-Notation predU := (fun (p1 p2 : pred _) x => p1 x || p2 x).
-Notation predC := (fun (p : pred _) x => ~~ p x).
-*)
-
-Theorem pred_eq_intro {X} (B1 B2 : X -> bool) : 
-  (forall x, B1 x = true <-> B2 x = true) -> [$ x | B1 x ] = [$ x | B2 x ].
-Proof.
-  intro H.
-  extensionality x.
-  assert (H0 := H x); clear H.
-  case_eq(B1 x); case_eq(B2 x); intros H1 H2; intuition; congruence.
-Qed.
 
 
 
-
-
-
-(** Section Equality_Type. ******************************************)
+(** Section Equality Type. ******************************************)
 
 Generalizable Variables X Y.
 
@@ -46,7 +17,13 @@ Definition eqb `{EqType X} (x y : X) := if eq_dec x y then true else false.
 Definition neqb `{EqType X} (x y : X) := if eq_dec x y then false else true.
 
 
+Definition swap {P1 P2} (x:{P1}+{P2}) := match x with left a => right a | right b => left b end.
+Global Transparent swap.
+
 Notation "x =d= y :> T" := (@eq_dec T _ x y)
+  (at level 70, y at next level, no associativity) : bool_scope.
+
+Notation "x <d> y :> T" := (swap (@eq_dec T _ x y))
   (at level 70, y at next level, no associativity) : bool_scope.
 
 Notation "x =b= y :> T" := (@eqb T _ x y)
@@ -56,6 +33,9 @@ Notation "x <b> y :> T" := (@neqb T _ x y)
   (at level 70, y at next level, no associativity, only parsing) : bool_scope.
 
 Notation "x =d= y" := (eq_dec x y)
+  (at level 70, no associativity) : bool_scope.
+
+Notation "x <d> y" := (swap (eq_dec  x y))
   (at level 70, no associativity) : bool_scope.
 
 Notation "x =b= y" := (eqb x y)
@@ -81,6 +61,8 @@ Theorem eqb_refl `{EqType X} (x : X) : eqb x x = true.
 Proof. apply eqb_eq. reflexivity. Qed.
 
 Hint Resolve eqb_eq' eqb_eq_false' eqb_refl.
+
+
 
 Global Instance : EqType bool := bool_dec.
 Global Instance : EqType nat := eq_nat_dec.
@@ -119,11 +101,15 @@ match xs, ys with
     else right _
 end.
 
+(* DONT MAKE THIS AN INSTANCE!! It can lead to nontermination *)
+Program Definition injectvie_EqType {X} `(EqType Y) (f:X->Y) (p : injective f) : EqType X :=
+  fun x1 x2 => if f x1 =d= f x2 then left _ else right _.
+Next Obligation. intro H1. apply H0. apply f_equal. assumption. Defined.
 
 
 
 
-(* Built-in equality vs boolean equality *)
+(* Demo: Built-in equality vs boolean equality *)
 
 Eval compute in 
   [(1,true);(2,false);(3,true)] = 
@@ -134,7 +120,7 @@ Eval compute in
   [(4,true);(2,false);(3,true)].
 
 
-
+(* Demo: Code extraction *) 
 Definition test := (@eqb (list (prod bool nat)) _).
 Recursive Extraction test.
 
@@ -149,8 +135,12 @@ Recursive Extraction test.
 
 (** Section Finite *******************************************************)
 
-Class Finite (X : Type) : Type := enum : {xs: list X|forall x, In x xs}.
+Class Finite (X : Type) : Type := enum : {xs: list X | forall x, In x xs}.
 
+
+(* Given a type X, this function returns a list of all elements of X,
+   provided COQ can infer that X is finite.
+*)
 Definition enum' X `{Finite X} := proj1_sig enum.
 Hint Unfold enum'.
 
@@ -161,6 +151,8 @@ Hint Resolve in_enum.
 Corollary in_enum' `{Finite X} (x:X) : In x (enum' X).
 Proof. unfold enum'; auto. Qed.
 Hint Resolve in_enum'.
+
+
 
 Global Program Instance : Finite bool := [true;false].
 Next Obligation. destruct x; intuition. Defined.
@@ -185,13 +177,27 @@ Global Program Instance option_finite `{Finite X} : Finite (option X) :=
   None :: map (@Some X) enum.
 Next Obligation. destruct x; intuition (auto using in_map). Qed.
 
+Global Program Instance surjective_Finite Y `(Finite X) (f:X->Y) (p : surjective f) : Finite Y :=
+  map f (enum' X).
+Next Obligation. 
+  unfold surjective in p. destruct (p x) as [x' H0]; subst x.
+  apply in_map. auto.
+Defined.
+
+
+(* This will require the axiom of choice *)
+(* Global Program Instance injective_Finite {X} `(Finite Y) (f:X->Y) (p : injective f) : Finite X. *)
+
+
 
 
 
 
 (** Section Finite of list. ***********************************************************)
+(* here we define the necessary infrastructure to create a finite type from a list *)
 
 Program Definition weaken {X} {xs: list X} x (y : {y|In y xs}) : {y|In y (x::xs)} := y.
+
 Program Fixpoint siglist {X} (xs : list X) : list {x:X|In x xs} :=
 match xs with
   | [] => []
@@ -282,6 +288,8 @@ Next Obligation.
 Defined.
 Next Obligation. intro eq; apply H1; congruence. Defined.
 
+
+(* For now, we state these well known facts as Axioms. *)
 Axiom fun_fin : forall X Y, Finite X -> Finite Y -> Finite (X -> Y).
 Global Instance fun_fin_inst : forall X Y, Finite X -> Finite Y -> Finite (X->Y) := fun_fin.
 
@@ -290,16 +298,17 @@ Axiom eq_dec_dep_f : forall X Y, Finite X -> (forall x:X, EqType(Y x)) -> EqType
 Global Instance dep_fun_EqType `(Finite X) `(forall x:X, EqType(Y x)) : EqType (forall x:X, Y x) :=
   eq_dec_dep_f _ _ _ _.
 
+
 Axiom dep_fun_fin : forall X Y, Finite X -> (forall x:X, Finite (Y x)) -> Finite (forall x:X, Y x).
 Global Instance dep_fun_fin_inst `(Finite X) `(forall x:X, Finite(Y x)) : Finite (forall x:X, Y x) := 
   dep_fun_fin _ _ _ _.
 
 
 (** IDEA!!! 
-first prove that there is a bijection between pairs of lists and functions
-then prove that there are only finitely many lists
+first prove that there is a bijection between associative lists and functions,
+then prove that there are only finitely many associative lists.
 
-f : X -> Y  ===  (enum' X, map f (enum' X)).
+f : X -> Y  ===  (enum' X, map f (enum' X)) === map (fun x => (x, f x) (enum' X)).
 **)
 
 

@@ -1,40 +1,43 @@
-Require Import List.
+Require Import List FunctionalExtensionality.
 Import ListNotations.
 
 
-Fixpoint list_eqb {X : Type} (eqb : X -> X -> bool) (xs : list X) (ys : list X) : bool :=
-  match xs, ys with
-  | nil, nil => true
-  | cons x xs, cons y ys => andb (eqb x y) (list_eqb eqb xs ys)
-  | _,_ => false
-  end.
 
-Lemma list_eqb_eq : forall {X : Type}, forall (eqb : X -> X -> bool),
-  forall p : (forall x y : X, eqb x y = true <-> x = y),
-  forall l1 l2 : list X, list_eqb  eqb l1 l2 = true <-> l1 = l2.
+(* decidable sets *)
+Definition pred T := T -> bool.
+
+Notation "x \in L" := (L x) (at level 30, L at next level, only parsing) : bool_scope.
+Notation "[$ x | B ]" := (fun x => B) (at level 0, x ident, only parsing) : bool_scope.
+Notation "[$ x : T | B ]" := (fun x : T => B) (at level 0, x ident, only parsing) : bool_scope.
+
+Open Scope bool_scope.
+
+Theorem pred_eq_intro {X} (B1 B2 : X -> bool) : 
+  (forall x, B1 x = true <-> B2 x = true) -> [$ x | B1 x ] = [$ x | B2 x ].
 Proof.
-  intros X eqb p l1.
-  induction l1; intros; destruct l2; intuition; try solve [inversion H].
-  + assert (eqb a x = true /\ list_eqb eqb l1 l2 = true) by auto using
-    andb_prop.
-    destruct H0. apply p in H0. apply IHl1 in H1.
-    congruence.
-  + inversion H; subst; simpl. 
-    apply andb_true_intro; split.
-    - apply p. reflexivity.
-    - apply IHl1. reflexivity.
+  intro H.
+  extensionality x.
+  assert (H0 := H x); clear H.
+  case_eq(B1 x); case_eq(B2 x); intros H1 H2; intuition; congruence.
 Qed.
 
-Lemma list_eq_dec {X} (eq_dec : forall x y:X, {x=y}+{x<>y}) (xs ys : list X) :
-  {xs=ys}+{xs<>ys}.
-Proof.
-  pose (eqb := fun x y => if eq_dec x y then true else false).
-  assert (forall x y, eqb x y = true <-> x = y).
-  + intros. subst eqb. split; intro H;
-    simpl in H; destruct (eq_dec x y); auto; inversion H.
-  + assert (H' := list_eqb_eq eqb H xs ys).
-    destruct (list_eqb eqb xs ys); [left|right]; intuition.
-Qed.
+
+
+
+
+Definition injective {A B} (f : A -> B) := 
+  forall x y : A, f x = f y -> x = y.
+
+Definition surjective {A B} (f : A -> B) := 
+  forall y : B, exists x : A, f x = y.
+
+Inductive bijective {A B} (f: A -> B) :=
+  is_bijective : injective f -> surjective f -> bijective f.
+
+Hint Constructors bijective.
+
+
+
 
 Lemma rev_eq_nil {X} {xs : list X} : rev xs = [] -> xs = [].
 Proof.

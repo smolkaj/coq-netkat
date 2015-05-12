@@ -11,26 +11,13 @@ Ltac invert H := inversion H; subst; clear H.
 
 Module GS (F : FIELDSPEC) (V : VALUESPEC(F)).
 
-Include  InductiveNETKAT.NetKAT'(F)(V).
-Global Instance value_eqtype (f : F.t) : EqType (V.t f) := (V.eq_dec f).
- 
-
-(* For now, assume that the set of packets is finite as an axiom.
-   This will follow automatically once we show that
-   Finite X -> Finite Y -> Finite (X->Y).                        *)
-Axiom P_finite : Finite P.t.
-Global Instance : Finite P.t := P_finite.
+Include  InductiveNETKAT.NetKAT(F)(V).
 
 
 
+(** Guarded NetKAT Strings *******************************************)
 
-
-
-
-
-
-(** guarded strings *******************************************)
-
+(* P ; (P;dup)* ; P *)
 Inductive gs := 
   | GS : P.t -> list P.t -> P.t -> gs.
 
@@ -72,10 +59,7 @@ Proof.
     rewrite firstn_skipn. reflexivity.
 Qed.
 
-(** End guarded strings #######################################*)
-
-
-
+(** End Guarded NetKAT Strings #######################################*)
 
 
 
@@ -155,7 +139,8 @@ Parameter gs_lang_star : gs_lang -> gs_lang.
 
 
 
-(** NFAs over guarded strings **********************************)
+(** NetKAT NFAs over guarded strings **************************************)
+(* See "A Coalgebraic Decision Procedure for NetKAT" for details *)
 
 Record nfa := {
   nfa_state :> Type;
@@ -212,6 +197,7 @@ Proof.
     eauto.
 Qed.
 
+
 Definition nfa_lang (A : nfa) := [$ gs | accept (nfa_s A) gs ].
 Hint Unfold nfa_lang.
 
@@ -222,63 +208,10 @@ Hint Unfold nfa_lang.
 
 (** primitive automata ****************************************************)
 
-(*
-
-Definition nfa_empty :=
-  {| nfa_s := tt; nfa_accept q a b := false; nfa_trans q a b q' := false |}.
-
-Definition nfa_id :=
-  {| nfa_s := tt; nfa_accept q a b := (a =b= b); nfa_trans q a b q' := false |}. 
-
-Definition nfa_singleton a b :=
-  {| nfa_s := tt; nfa_trans q a b q' := false;
-     nfa_accept q a' b' := if a =d= a' then (if b =d= b' then true else false)
-                           else false
-  |}.
-
-Definition nfa_filter f :=
-  {| nfa_s := tt; nfa_accept q a b := f a; nfa_trans q a b q' := false |}.
-
-Definition nfa_mod m :=
-  {| nfa_s := tt; nfa_accept q a b := (b =b= m a); nfa_trans q a b q' := false |}.
-
-Lemma nfa_empty_correct : nfa_lang nfa_empty = pred0.
-Proof.
-  extensionality s.
-  unfold nfa_lang.
-  unfold accept; destruct s as [a [ |b w] c]; simpl; reflexivity.
-Qed.
-
-Lemma nfa_id_correct : nfa_lang nfa_id = [$ s | let 'a~(w)~b := s in (a =b= b) && (w =b= [])].
-Proof.
-  apply pred_eq_intro. intro s; destruct s as [a w b]; unfold nfa_lang.
-  rewrite <- accept_correct. rewrite andb_true_iff.
-  split; intro H; invert H.
-  + invert H1. intuition.
-  + invert H2.
-  + rewrite eqb_eq in H1. subst w. eauto.
-Qed.
-
-Lemma nfa_singleton_correct a b : 
-  nfa_lang (nfa_singleton a b) = [$ w | w =b= a~([])~b ].
-Proof.
-  extensionality x. unfold nfa_lang, accept.
-  destruct (x =d= a~([])~b); subst; simpl.
-  + rewrite eqb_refl.
-    destruct (a =d= a); destruct (b =d= b); congruence.
-  + rewrite <- eqb_eq_false in n. rewrite n.
-    destruct x as [a' [ | b' w] c]; simpl; auto.
-    destruct (a =d= a'); destruct (b =d= c); try congruence.
-    subst; rewrite eqb_refl in n. assumption.
-Qed.
-
-*)
-
 Definition nfa_pred p :=
   {| nfa_s := tt; 
      nfa_accept q a b := p a b; 
-     nfa_trans q a b q' := false 
-  |}.
+     nfa_trans q a b q' := false |}.
 
 
 Lemma nfa_pred_correct p : 
@@ -296,7 +229,7 @@ Qed.
 Definition nfa_dup :=
   {| nfa_s := false;
      nfa_accept q a b := q && (a =b= b);
-     nfa_trans q a b q' :=  (negb q) && q' && (a =b= b) |}.
+     nfa_trans q a b q' := (negb q) && q' && (a =b= b) |}.
 
 
 Lemma nfa_dup_correct : 
@@ -306,7 +239,7 @@ Proof.
   rewrite <- accept_correct; split; intro H.
   + apply andb_true_iff. repeat rewrite eqb_eq. invert H. invert H1.
     invert H2. invert H4. invert H1.
-    rewrite andb_true_iff in *. rewrite eqb_eq in H0; rewrite eqb_eq in H2.
+    rewrite andb_true_iff in *. rewrite eqb_eq in H0. rewrite eqb_eq in H2.
     intuition congruence. invert H2. repeat rewrite andb_true_iff in *.
     destruct H0 as [H0 _]; destruct H1 as [[H1 _] _]. subst q'.
     invert H1.
@@ -487,6 +420,7 @@ Parameter nfa_star : nfa -> nfa.
 
 
 (* NetKAT to NFA ***************************************************************)
+(* this is Thompson's construction for NetKAT *)
 
 Fixpoint netkat_nfa (p : policy) : nfa :=
 match p with
@@ -512,7 +446,7 @@ Proof.
            rewrite nfa_union_correct; apply lang_union_correct |
            rewrite nfa_seq_correct; apply lang_conc_correct | idtac];
     repeat rewrite andb_true_iff; repeat split; eauto 3.
-    - unfold neqb; if_case; auto.
+    - unfold neqb. if_case; auto.
     - destruct h' as [c u']. destruct (bstep_prefix H) as [u H1]. subst u'.
       destruct (bstep_prefix H0) as [u' H1]. rewrite app_assoc in H1.
       assert (w=u'++u) by eauto using app_inv_tail. subst w. clear H1.
@@ -528,7 +462,7 @@ Proof.
            rewrite nfa_seq_correct in H; apply lang_conc_correct in H | idtac];
     repeat rewrite andb_true_iff in *; repeat rewrite eqb_eq in H; intuition;
     try (assert (w=[]) by auto using rev_eq_nil; subst; simpl; eauto).
-    - unfold neqb in H2; destruct (b f =d= t); auto. inversion H2.
+    - unfold neqb in H2. destruct (b f =d= t); auto. inversion H2.
     - destruct H as [[a' v' c] [[c' u' b'] [H1 [H2 H3]]]].
       unfold gs_conc in H1. destruct (c =d= c'); inversion H1. subst c' a' b'.
       apply (f_equal (@rev P.t)) in H4. rewrite rev_involutive in H4. subst w.
