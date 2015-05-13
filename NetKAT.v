@@ -422,9 +422,7 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
         simpl in H. apply power_slide' in H.
           destruct H as [h''']. destruct H as [H2 H4].
           apply (IHn h'''). assumption.
-    
-    admit.
-    admit.
+ 
   Qed.
   *)
     

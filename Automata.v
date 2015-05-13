@@ -486,6 +486,4 @@ Proof.
     - subst b; assert (w=[a]) by auto using rev_eq_singleton; subst; simpl; eauto.
 Qed.
 
-
-
 End Automata.

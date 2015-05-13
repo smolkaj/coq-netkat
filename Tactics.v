@@ -1,15 +1,17 @@
 (** some useful custom tactics **)
 Require Import Bool Classes List.
 
+
+Ltac invert H := inversion H; try(subst); eauto.
+
+Ltac gd id := generalize dependent id.
+
 Ltac split_if :=
   match goal with
     | [ |- context[if ?X then _ else _] ] => destruct X
     | [ _ : context[if ?X then _ else _] |- _ ] => destruct X
   end.
 
-Ltac invert H := inversion H; try(subst); eauto.
-
-Ltac gd id := generalize dependent id.
 
 
 Create HintDb __bool_reflection.
@@ -28,10 +30,10 @@ Hint Rewrite
   exists_false existsb_false exists_iff
   (* rewrite rules from List.v *)
   existsb_exists existsb_app forallb_app forallb_forall
-: __bool_reflection.
+: bool_reflection.
 
 Ltac steffen_rewrite := 
-  autorewrite with __bool_reflection in *.
+  autorewrite with bool_reflection in *.
 
 
 Ltac steffen :=

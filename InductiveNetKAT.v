@@ -186,18 +186,14 @@ Lemma ssteps_seq_assoc : forall p q r h1 h2,
 Proof.
   intros.
   unfold ssteps in H.
-  apply clos_trans_refl_nat in H;
-  destruct H as [n];
-  generalize dependent h2; generalize dependent h1; generalize dependent r;
-  generalize dependent q; generalize dependent p;
-  dependent induction n; intros; invert H.
-  - admit.
-  - invert H1; invert H2.
-    * subst x n h'; clear IHn H H6 H1 H2. admit.
-    * eright; eauto. apply IHn; eauto.
-    * admit.
-    * eright; eauto. apply clos_trans_refl_nat; eauto.
-    * invert H0.  
+  apply clos_trans_refl_nat in H.
+  destruct H as [n].
+  dependent induction H.
+  - (* x is a contradiction. How to tell Coq? *) admit.
+  - invert H; eright; eauto.
+    * apply IHnpower; eauto.
+    * apply clos_trans_refl_nat. exists n; assumption.
+    * invert H0. invert H1. 
 Qed.
 
 
