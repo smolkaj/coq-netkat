@@ -35,7 +35,7 @@ Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
 Lemma bstep_interpret p h h' : (|p|) h h' -> [|p|] h h'.
 Proof.
   intros.
-  induction H; simpl; try (simpl in H); try if_case; auto.
+  induction H; simpl; try (simpl in H); try split_if; auto.
   - left; assumption.
   - right; assumption.
   - exists h'. intuition.
@@ -50,8 +50,8 @@ Proof.
   gd h'; gd h; induction p; intros h h' H; destruct h as [pk h];
   simpl in H; try (unfold empty in H); try (unfold singleton in H);
   try (subst h'; constructor); intuition.
-  - destruct (t =d= pk f); try subst h'; intuition.
-  - destruct (t =d= pk f); simpl in H; try subst h'; intuition.
+  - split_if; try subst h'; intuition.
+  - split_if; simpl in H; try subst h'; intuition.
   - destruct H; [apply BstepPlusLeft|apply BstepPlusRight]; intuition.
   - destruct H as [h'']. eapply BstepSeq; intuition eauto.
   - destruct H as [n].
@@ -125,8 +125,8 @@ Lemma sstep_progress p :
   (p=Id) \/ (p=Drop) \/ (forall h, exists r h', sstep (p,h) (r,h')).
 Proof.
   induction p; first [auto;fail | right;right;intro;destruct h as [pk h] ]; eauto.
-  + destruct (V.eq_dec f (pk f) t); eauto.
-  + destruct (V.eq_dec f (pk f) t); eauto.
+  + destruct (pk f =d= t); eauto.
+  + destruct (pk f =d= t); eauto.
   + dependent destruction IHp1; eauto; dependent destruction H; subst; eauto.
     assert (H':= H (pk,h)); clear H.
     destruct H' as [r]; destruct H as [h']; exists (r;;p2); exists h'; eauto.

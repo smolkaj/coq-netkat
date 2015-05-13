@@ -55,8 +55,8 @@ Theorem conc_take_drop (s: gs) (n : nat) c :
   gs_conc (take n s c) (drop n c s) = Some s.
 Proof.
   gd s; destruct n; intros; destruct s as [a w b]; simpl.
-  + if_case; intuition auto.
-  + if_case; intuition auto.
+  + split_if; intuition auto.
+  + split_if; intuition auto.
     destruct w; intuition simpl.
     rewrite firstn_skipn. reflexivity.
 Qed.
@@ -100,21 +100,20 @@ Theorem lang_conc_correct L1 L2 s :
   <-> (s \in gs_lang_conc L1 L2 = true).
 Proof.
   split; intro H.
-  + destruct H as [s1 [s2 [H0 [H1 H2]]]].
+  + steffen.
     destruct s1 as [a w b]; destruct s2 as [b' v c].
-    simpl in H0. destruct (b =d= b'); invert H0.
+    simpl in H. split_if; invert H.
     unfold gs_lang_conc. apply exists_iff. exists b'.
     apply existsb_exists. exists (length w).
     split.
-    - clear H1; clear H2; induction w; simpl; intuition auto.
+    - clear H1; clear H0; induction w; simpl; intuition auto.
       simpl in IHw; destruct IHw; intuition auto.
       repeat right. rewrite <- seq_shift. apply in_map. assumption.
     - simpl. rewrite firstn_app; rewrite skipn_app.
-      rewrite H1; rewrite H2. auto.
+      rewrite H1; rewrite H0. auto.
   + unfold gs_lang_conc in H; rewrite existsb_exists in H.
-    destruct H as [c [_ H]]. rewrite existsb_exists in H.
-    destruct H as [n [_ H]]. rewrite andb_true_iff in H.
-    exists (take n s c). exists (drop n c s).
+    steffen.
+    exists (take x0 s x). exists (drop x0 x s).
     intuition idtac. symmetry. apply conc_take_drop.
 Qed.
 
@@ -191,12 +190,8 @@ Theorem accept_correct (A : nfa) (q : A) gs : accept_prop q gs <-> accept q gs =
 Proof.
   destruct gs as [a w b].
   split; intro H; gd q; gd a; gd b; induction w; intros;
-  unfold accept in *; simpl;  try invert H; auto.
-  + apply exists_iff; exists q'.
-    apply andb_true_iff. intuition eauto.
-  + apply exists_iff in H1. destruct H1 as [q' H1].
-    apply andb_true_iff in H1; destruct H1 as [H1 H2].
-    eauto.
+  unfold accept in *; simpl;  try invert H; steffen; eauto.
+  + exists q'. steffen. intuition eauto.
 Qed.
 
 
@@ -221,8 +216,7 @@ Lemma nfa_pred_correct p :
 Proof.
   apply pred_eq_intro. intro s; destruct s as [a w b]; unfold nfa_lang.
   rewrite <- accept_correct.
-  split; intro H; invert H; simpl in *; try apply andb_true_iff; intuition.
-  rewrite andb_true_iff in H1. destruct H1 as [H0 H1]; rewrite eqb_eq in H1.
+  split; intro H; invert H; simpl in *; intuition; steffen.
   subst w. auto.
 Qed.
 
@@ -238,15 +232,12 @@ Lemma nfa_dup_correct :
   nfa_lang nfa_dup = [$ s | let 'a~(w)~b := s in (a =b= b) && (w =b= [a])].
 Proof. 
   apply pred_eq_intro; intro s; destruct s as [a w b]; unfold nfa_lang;
-  rewrite <- accept_correct; split; intro H.
-  + apply andb_true_iff. repeat rewrite eqb_eq. invert H. invert H1.
-    invert H2. invert H4. invert H1.
-    rewrite andb_true_iff in *. rewrite eqb_eq in H0. rewrite eqb_eq in H2.
-    intuition congruence. invert H2. repeat rewrite andb_true_iff in *.
-    destruct H0 as [H0 _]; destruct H1 as [[H1 _] _]. subst q'.
-    invert H1.
-  + apply andb_true_iff in H; repeat rewrite eqb_eq in H; destruct H as [H1 H2]; subst.
-    right with (q':=true); simpl. apply eqb_refl. left. simpl. apply eqb_refl.
+  rewrite <- accept_correct; split; intro H; steffen.
+  + invert H. invert H1. invert H2. invert H4. invert H1.
+    steffen. subst. split; congruence.
+    invert H2. steffen. congruence.
+  + subst. right with (q':=true); intuition; simpl.
+    apply eqb_refl. left. simpl. apply eqb_refl.
 Qed.
     
 
@@ -383,16 +374,34 @@ Lemma seq_inl A1 A2 q s :
   <-> (@accept (nfa_seq A1 A2) (inl q) s = true).
 Proof.
   split; intro H.
-  + destruct H as [s1 [s2 [H1 [H2 H3]]]].
-    apply accept_correct. induction H2.
-    - rewrite <- conc_take_drop with (n:=0) (c:=b) in H1.
-      destruct s as [a' v c]; destruct s2 as [b' w' c'].
-      simpl in H1. destruct (b =d= b); destruct (b =d= b'); invert H1; try congruence.
+  + destruct s as [a w c].
+    destruct H as [[a' u b] [[b' v c'] [H1 [H2 H3]]]].
+    apply accept_correct. gd a; gd w; gd c; gd b'; gd v; induction H2; intros.
+    - rewrite <- conc_take_drop with (n:=0) (c:=b') in H1.
+      simpl in H1. repeat split_if; invert H1; try congruence.
       invert H3.
       * left. simpl. apply exists_iff. exists b'. intuition.
-      * admit.
-   - admit.
- + admit.
+      * eright. instantiate (1:=inr q'). simpl. apply exists_iff.
+        exists b'. intuition. rewrite accept_correct in *. rewrite seq_inr.
+        assumption.
+   - simpl in H1. split_if; invert H1. eright. instantiate (1 := inl q').
+     simpl; assumption. eapply IHaccept_prop. eassumption. simpl.
+     split_if; intuition.
+ + apply accept_correct in H. dependent induction H; simpl in H.
+   - steffen. exists (a~([])~x); exists (x~([])~b). intuition eauto 2.
+     simpl. split_if; intuition.
+   - destruct q' as [q'|q'].
+     * assert (exists s1 s2 : gs,
+                  Some b~(w)~c = gs_conc s1 s2 /\
+                  accept_prop q' s1 /\ accept_prop (nfa_s A2) s2) by eauto.
+       steffen. destruct s1 as [b' u d]; destruct s2 as [d' v c'].
+       simpl in H1. split_if; invert H1.
+       exists a~(b'::u)~d'; exists d'~(v)~c'; intuition eauto 2.
+       simpl. split_if; intuition.
+     * steffen. exists a~([])~x; exists x~(b::w)~c; intuition eauto 2.
+       simpl. split_if; intuition. eright with (q':=q'); eauto.
+       rewrite accept_correct in *. rewrite <- seq_inr with (A1:=A1).
+       assumption.
 Qed.
 
 Lemma nfa_seq_correct A1 A2 :
@@ -449,12 +458,12 @@ Proof.
            rewrite nfa_union_correct; apply lang_union_correct |
            rewrite nfa_seq_correct; apply lang_conc_correct | idtac];
     repeat rewrite andb_true_iff; repeat split; eauto 3.
-    - unfold neqb. if_case; auto.
+    - unfold neqb. split_if; auto.
     - destruct h' as [c u']. destruct (bstep_prefix H) as [u H1]. subst u'.
       destruct (bstep_prefix H0) as [u' H1]. rewrite app_assoc in H1.
       assert (w=u'++u) by eauto using app_inv_tail. subst w. clear H1.
       rewrite rev_app_distr. exists (a~(rev u)~c); exists (c~(rev u')~b).
-      simpl. rewrite <- app_assoc in IHbstep2. if_case; intuition eauto 2.
+      simpl. rewrite <- app_assoc in IHbstep2. split_if; intuition eauto 2.
     - (* star case 1 *) admit.
     - (* star case 2 *) admit.
     - replace w with [b]. intuition.
@@ -465,9 +474,9 @@ Proof.
            rewrite nfa_seq_correct in H; apply lang_conc_correct in H | idtac];
     repeat rewrite andb_true_iff in *; repeat rewrite eqb_eq in H; intuition;
     try (assert (w=[]) by auto using rev_eq_nil; subst; simpl; eauto).
-    - unfold neqb in H2. destruct (b f =d= t); auto. inversion H2.
+    - unfold neqb in H2. split_if; auto. inversion H2.
     - destruct H as [[a' v' c] [[c' u' b'] [H1 [H2 H3]]]].
-      unfold gs_conc in H1. destruct (c =d= c'); inversion H1. subst c' a' b'.
+      unfold gs_conc in H1. split_if; inversion H1. subst c' a' b'.
       apply (f_equal (@rev P.t)) in H4. rewrite rev_involutive in H4. subst w.
       rewrite <- (rev_involutive v') in H2.
       rewrite <- (rev_involutive u') in H3.

@@ -24,10 +24,10 @@ Notation "x <d> y :> T" := (swap (@eq_dec T _ x y))
   (at level 70, y at next level, no associativity) : bool_scope.
 
 Notation "x =b= y :> T" := (@eqb T _ x y)
-  (at level 70, y at next level, no associativity, only parsing) : bool_scope.
+  (at level 70, y at next level, no associativity) : bool_scope.
 
 Notation "x <b> y :> T" := (@neqb T _ x y)
-  (at level 70, y at next level, no associativity, only parsing) : bool_scope.
+  (at level 70, y at next level, no associativity) : bool_scope.
 
 Notation "x =d= y" := (eq_dec x y)
   (at level 70, no associativity) : bool_scope.
@@ -36,10 +36,10 @@ Notation "x <d> y" := (swap (eq_dec  x y))
   (at level 70, no associativity) : bool_scope.
 
 Notation "x =b= y" := (eqb x y)
-  (at level 70, no associativity, only parsing) : bool_scope.
+  (at level 70, no associativity) : bool_scope.
 
 Notation "x <b> y" := (neqb x y) 
-  (at level 70, no associativity, only parsing) : bool_scope.
+  (at level 70, no associativity) : bool_scope.
 
 
 
@@ -237,7 +237,7 @@ Proof.
   + destruct (IHxs H) as [n H']. exists (S n); simpl. intuition.
 Qed.
 
-Theorem existsb_false {X B xs} :
+Theorem existsb_false X B (xs : list X) :
   existsb B xs = false <-> (forall x : X, In x xs -> B x = false).
 Proof.
   split.
@@ -251,7 +251,7 @@ Proof.
     - apply IHxs. intros. apply H. simpl; auto.
 Qed.
 
-Theorem exists_false `{Finite X} B :
+Theorem exists_false X `(Finite X) B :
   [$ exists x : X | B x ] = false <-> (forall x:X, B x = false).
 Proof.
   split; intros.
@@ -259,13 +259,15 @@ Proof.
   + apply existsb_false; eauto.
 Qed.
 
-Theorem exists_iff `(Finite X) B : (exists x, B x = true) <-> [$ exists x | B x ] = true.
+Theorem exists_iff X `(Finite X) B : [$ exists x | B x ] = true <-> (exists x, B x = true).
 Proof.
   rewrite existsb_exists.
   split; intro H0; destruct H0 as [x H0]; exists x; intuition eauto.
 Qed.
-Hint Resolve exists_iff.
 
+Theorem exists_existb_intro `(Finite X) B : (exists x, B x = true) -> [$ exists x | B x ] = true.
+Proof. rewrite exists_iff. intro H'; exact H'. Qed.
+Hint Resolve exists_existb_intro.
 
 
 
