@@ -2,8 +2,7 @@
     This template can be easily adapted to introduce new fields,
     different values, etc. *)
 
-Require Import Optimize.
-Require Import List Bool.
+Require Import Optimize Automata List Bool.
 Import ListNotations.
 
 
@@ -59,5 +58,8 @@ End V.
 
 
 
-Module N := Optimize.Optimize(F)(V).
-(* Print N. *)
+Module O := Optimize.Optimize(F)(V).
+Module A := Automata.Automata(F)(V).
+
+(* Print O. *)
+(* Print A. *)

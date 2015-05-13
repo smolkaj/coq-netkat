@@ -42,6 +42,7 @@ Notation "x <b> y" := (neqb x y)
   (at level 70, no associativity, only parsing) : bool_scope.
 
 
+
 Theorem eqb_eq `{EqType X} (x y : X) : eqb x y = true <-> x=y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
 
@@ -292,14 +293,16 @@ Axiom fun_fin : forall X Y, Finite X -> Finite Y -> Finite (X -> Y).
 Global Instance fun_fin_inst : forall X Y, Finite X -> Finite Y -> Finite (X->Y) := fun_fin.
 
 
-Axiom eq_dec_dep_f : forall X Y, Finite X -> (forall x:X, EqType(Y x)) -> EqType(forall x : X, Y x).
-Global Instance dep_fun_EqType `(Finite X) `(forall x:X, EqType(Y x)) : EqType (forall x:X, Y x) :=
-  eq_dec_dep_f _ _ _ _.
+Axiom eq_dec_dep_f : forall X Y,
+  Finite X -> (forall x:X, EqType(Y x)) -> EqType(forall x : X, Y x).
+Global Instance dep_fun_EqType `(Finite X) `(forall x:X, EqType(Y x)) : 
+  EqType (forall x:X, Y x) := eq_dec_dep_f _ _ _ _.
 
 
-Axiom dep_fun_fin : forall X Y, Finite X -> (forall x:X, Finite (Y x)) -> Finite (forall x:X, Y x).
-Global Instance dep_fun_fin_inst `(Finite X) `(forall x:X, Finite(Y x)) : Finite (forall x:X, Y x) := 
-  dep_fun_fin _ _ _ _.
+Axiom dep_fun_fin : forall X Y,
+  Finite X -> (forall x:X, Finite (Y x)) -> Finite (forall x:X, Y x).
+Global Instance dep_fun_fin_inst `(Finite X) `(forall x:X, Finite(Y x)) :
+  Finite (forall x:X, Y x) := dep_fun_fin _ _ _ _.
 
 
 (** IDEA!!! 
