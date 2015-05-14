@@ -29,13 +29,19 @@ Arguments GS a w b : rename.
 
 Notation "a ~( w )~ b" := (GS a w b) (at level 1, format "a ~( w )~ b").
 
+
+(* equality on guarded NetKAT strings is decidable, since equality on packets
+   is decidable *)
 Global Program Instance : EqType gs := fun x y => match x,y with
   a~(w)~b, a'~(w')~b' => if (a,w,b) =d= (a',w',b') then left _ else right _
 end.
 
+
 Definition gs_length (gs : gs) :=
   let '_~(w)~_ := gs in length w.
 
+(* Dexter also calls this the "fusion product",
+   see "Automata on Guarded Strings and Applications" *)
 Definition gs_conc (s1 s2 : gs) :=
   let 'a~(w)~b := s1 in
   let 'b'~(v)~c := s2 in
@@ -54,9 +60,9 @@ Definition drop (n:nat) (c : P.t) (s:gs) : gs :=
 Theorem conc_take_drop (s: gs) (n : nat) c : 
   gs_conc (take n s c) (drop n c s) = Some s.
 Proof.
-  gd s; destruct n; intros; destruct s as [a w b]; simpl.
-  + split_if; intuition auto.
-  + split_if; intuition auto.
+  destruct s as [a w b]. destruct n; simpl.
+  + split_if; intuition idtac.
+  + split_if; intuition idtac.
     destruct w; intuition simpl.
     rewrite firstn_skipn. reflexivity.
 Qed.
@@ -69,7 +75,7 @@ Qed.
 
 
 
-(** languages over guarded strings *****************************)
+(** decidable languages over guarded NetKAT strings *****************************)
 
 Definition gs_lang := gs -> bool.
 
@@ -446,7 +452,6 @@ match p with
   | q;;r  => nfa_seq (netkat_nfa q) (netkat_nfa r)
   | q*    => nfa_star (netkat_nfa q)
 end.
-
 
 Theorem netkat_nfa_correct (p : policy) a b v w :
   (| p |) (a,v) (b,w++v) <-> (a~(rev w)~b \in nfa_lang (netkat_nfa p) = true).

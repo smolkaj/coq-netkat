@@ -27,13 +27,13 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Implicit Type p q r : policy.
 
-  Notation "f <- v" := (Mod f v) (at level 30, no associativity) : netkat_scope.
-  Notation "f == v" := (Filter f v) (at level 30, no associativity) : netkat_scope.
-  Notation "f != v" := (NFilter f v) (at level 30, no associativity) : netkat_scope.
+  Notation "f <- v" := (Mod f v) (at level 30, no associativity, format "f <- v") : netkat_scope.
+  Notation "f == v" := (Filter f v) (at level 30, no associativity, format "f == v") : netkat_scope.
+  Notation "f != v" := (NFilter f v) (at level 30, no associativity, format "f != v") : netkat_scope.
   Notation "p + q" := (Union p q) (at level 50, left associativity) : netkat_scope.
   Notation "p ;; q" := (Seq p q) (at level 40, left associativity) : netkat_scope.
-  Notation "p *" := (Star p) (at level 31, left associativity) : netkat_scope.
-  Notation "pk [ f := v ]" := (P.mod pk f v) (at level 10, no associativity) : netkat_scope.
+  Notation "p *" := (Star p) (at level 31, left associativity, format "p *") : netkat_scope.
+  Notation "pk [ f := v ]" := (P.mod pk f v) (at level 10, no associativity, format "pk [ f := v ]") : netkat_scope.
   Global Open Scope netkat_scope.
   Delimit Scope netkat_scrope with netkat.
 
