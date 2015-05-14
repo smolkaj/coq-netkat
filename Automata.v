@@ -457,8 +457,7 @@ Proof.
     first [rewrite nfa_pred_correct | rewrite nfa_dup_correct | 
            rewrite nfa_union_correct; apply lang_union_correct |
            rewrite nfa_seq_correct; apply lang_conc_correct | idtac];
-    repeat rewrite andb_true_iff; repeat split; eauto 3.
-    - unfold neqb. split_if; auto.
+    steffen; repeat split; eauto 3.
     - destruct h' as [c u']. destruct (bstep_prefix H) as [u H1]. subst u'.
       destruct (bstep_prefix H0) as [u' H1]. rewrite app_assoc in H1.
       assert (w=u'++u) by eauto using app_inv_tail. subst w. clear H1.
@@ -472,18 +471,18 @@ Proof.
     first [rewrite nfa_pred_correct in H | rewrite nfa_dup_correct in H | 
            rewrite nfa_union_correct in H; apply lang_union_correct in H |
            rewrite nfa_seq_correct in H; apply lang_conc_correct in H | idtac];
-    repeat rewrite andb_true_iff in *; repeat rewrite eqb_eq in H; intuition;
+    steffen; intuition;
     try (assert (w=[]) by auto using rev_eq_nil; subst; simpl; eauto).
-    - unfold neqb in H2. split_if; auto. inversion H2.
-    - destruct H as [[a' v' c] [[c' u' b'] [H1 [H2 H3]]]].
-      unfold gs_conc in H1. split_if; inversion H1. subst c' a' b'.
-      apply (f_equal (@rev P.t)) in H4. rewrite rev_involutive in H4. subst w.
-      rewrite <- (rev_involutive v') in H2.
-      rewrite <- (rev_involutive u') in H3.
+    - destruct s1 as [a' v' c]; destruct s2 as [c' u' b'].
+      unfold gs_conc in H. split_if; invert H.
+      assert (w = rev(v'++u')) by (rewrite <- H4; auto using rev_involutive). subst w.
+      rewrite <- (rev_involutive v') in H0. 
+      rewrite <- (rev_involutive u') in H1.
       rewrite rev_app_distr. rewrite <- app_assoc.
       econstructor; eauto.
     - (* star case *) admit.
-    - subst b; assert (w=[a]) by auto using rev_eq_singleton; subst; simpl; eauto.
+    - subst b. assert (w=[a]) by auto using rev_eq_singleton; subst w.
+      simpl; eauto.
 Qed.
 
 End Automata.

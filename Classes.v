@@ -46,11 +46,17 @@ Notation "x <b> y" := (neqb x y)
 Theorem eqb_eq `{EqType X} (x y : X) : eqb x y = true <-> x=y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
 
+Theorem neqb_neq `{EqType X} (x y : X) : neqb x y = true <-> x<>y.
+Proof. unfold neqb. destruct (eq_dec x y); intuition. Qed.
+
 Theorem eqb_eq' `{EqType X} (x y : X) : eqb x y = true -> x=y.
 Proof. rewrite eqb_eq. auto. Qed.
 
 Theorem eqb_eq_false `{EqType X} (x y : X) : eqb x y = false <-> x<>y.
 Proof. unfold eqb. destruct (eq_dec x y); intuition. Qed.
+
+Theorem neqb_neq_false `{EqType X} (x y : X) : neqb x y = false <-> x=y.
+Proof. unfold neqb. destruct (eq_dec x y); intuition. inversion H0. Qed.
 
 Theorem eqb_eq_false' `{EqType X} (x y : X) : x<>y <-> eqb x y = false.
 Proof. symmetry. apply eqb_eq_false. Qed.

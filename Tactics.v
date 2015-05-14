@@ -41,11 +41,18 @@ repeat (first [
   match goal with
     | [ H : _ /\ _ |- _ ] => destruct H
     | [ H : exists x, _ |- _ ] => destruct H as [x H]
+    (* for some reason the above line does not always succeed;
+       this is a backup rule *)
     | [ H : exists x, _ |- _ ] => destruct H
+    (* autorewrite cannot handle these *)
     | [ H : context [eqb _ _ = true] |- _ ] => rewrite eqb_eq in H
     | [ H : context [eqb _ _ = false] |- _ ] => rewrite eqb_eq_false in H
     | [ |- context [eqb _ _ = true] ] => rewrite eqb_eq
     | [ |- context [eqb _ _ = false] ] => rewrite eqb_eq_false
+    | [ H : context [neqb _ _ = true] |- _ ] => rewrite neqb_neq in H
+    | [ H : context [neqb _ _ = false] |- _ ] => rewrite neqb_neq_false in H
+    | [ |- context [neqb _ _ = true] ] => rewrite neqb_neq
+    | [ |- context [neqb _ _ = false] ] => rewrite neqb_neq_false
   end |
   steffen_rewrite
 ]).
