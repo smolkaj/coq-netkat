@@ -25,7 +25,7 @@ Inductive gs :=
 
 Hint Constructors gs.
 
-Arguments GS a w b : rename.
+Global Arguments GS a w b : rename.
 
 Notation "a ~( w )~ b" := (GS a w b) (at level 1, format "a ~( w )~ b").
 
@@ -96,10 +96,10 @@ Definition gs_lang_conc L1 L2 := [$ s : gs | [$ exists a |
   existsb (fun n => take n s a \in L1 && drop n a s \in L2) (seq 0 (S (gs_length s))) ] ].
 
 Lemma firstn_app {X} (xs ys : list X) : firstn (length xs) (xs ++ ys) = xs.
-Proof. gd xs; gd ys; induction xs; intros; intuition simpl. congruence. Qed.
+Proof. induction xs; intros; intuition simpl. congruence. Qed.
 
 Lemma skipn_app {X} (xs ys : list X) : skipn (length xs) (xs ++ ys) = ys.
-Proof. gd xs; gd ys; induction xs; intros; intuition simpl. Qed.
+Proof. induction xs; intros; intuition simpl. Qed.
 
 Theorem lang_conc_correct L1 L2 s :
   (exists s1 s2, (Some s = gs_conc s1 s2) /\ (s1 \in L1 = true) /\ (s2 \in L2 = true))

@@ -67,7 +67,6 @@ Proof. apply eqb_eq. reflexivity. Qed.
 Hint Resolve eqb_eq' eqb_eq_false' eqb_refl.
 
 
-
 Global Instance : EqType bool := bool_dec.
 Global Instance : EqType nat := eq_nat_dec.
 Global Program Instance : EqType True := fun x y => match x,y with I,I => left _ end. 
@@ -106,7 +105,7 @@ match xs, ys with
 end.
 
 (* DONT MAKE THIS AN INSTANCE!! It can lead to nontermination *)
-Program Definition injectvie_EqType {X} `(EqType Y) (f:X->Y) (p : injective f) : EqType X :=
+Program Definition injective_EqType {X} `(EqType Y) (f:X->Y) (p : injective f) : EqType X :=
   fun x1 x2 => if f x1 =d= f x2 then left _ else right _.
 Next Obligation. intro H1. apply H0. apply f_equal. assumption. Defined.
 

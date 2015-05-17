@@ -46,12 +46,12 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
 
   Fixpoint power n f :=
     match n with
-      | O => (fun h => singleton h)
+      | O => @singleton H.t
       | S n => kleisli f (power n f)
     end.
 
   (* denotational semantics *)
-  Fixpoint interpret (p : policy) (h : H.t) : set H.t :=
+  Fixpoint denot (p : policy) (h : H.t) : set H.t :=
   match p, h with
   | Drop, _ => 
       @empty H.t
@@ -66,16 +66,16 @@ Module NetKAT (F : FIELDSPEC) (V : VALUESPEC(F)).
   | Mod f v, (pk,h) => 
       singleton (pk[f:=v], h)
   | p+q, h =>
-      union (interpret p h) (interpret q h)
+      union (denot p h) (denot q h)
   | p;;q, h =>
-      kleisli (interpret p) (interpret q) h
+      kleisli (denot p) (denot q) h
   | p*, h =>
-      fun h' => ex (fun n => power n (interpret p) h h')
+      fun h' => ex (fun n => power n (denot p) h h')
   | Dup, (pk,h) => 
       singleton (pk, pk::h)
   end.
 
-  Notation "'[|' p '|]'" := (interpret p) (at level 1) : netkat_scope.
+  Notation "'[|' p '|]'" := (denot p) (at level 1) : netkat_scope.
 
 
 

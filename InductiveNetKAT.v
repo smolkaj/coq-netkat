@@ -32,7 +32,7 @@ Hint Constructors bstep.
 Notation "'(|' p '|)'" := (bstep p) (at level 1) : netkat_scope.
 
 
-Lemma bstep_interpret p h h' : (|p|) h h' -> [|p|] h h'.
+Lemma bstep_denot p h h' : (|p|) h h' -> [|p|] h h'.
 Proof.
   intros.
   induction H; simpl; try (simpl in H); try split_if; auto.
@@ -45,7 +45,7 @@ Proof.
 Qed.
 
 
-Lemma interpret_bstep p h h' : [|p|] h h' -> (|p|) h h'.
+Lemma denot_bstep p h h' : [|p|] h h' -> (|p|) h h'.
 Proof.
   gd h'; gd h; induction p; intros h h' H; destruct h as [pk h];
   simpl in H; try (unfold empty in H); try (unfold singleton in H);
@@ -376,7 +376,7 @@ Proof.
   intros.
   unfold A.
   destruct h as [pk h]; destruct h' as [pk' h'].
-  apply interpret_bstep in H. apply bstep_ssteps_iff .
+  apply denot_bstep in H. apply bstep_ssteps_iff .
   generalize dependent h'; generalize dependent pk';
   generalize dependent h; generalize dependent pk.
   functional induction (A' p); intros;
