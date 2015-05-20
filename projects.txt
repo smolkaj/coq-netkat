@@ -53,8 +53,9 @@ Implement Kleene Star on Automata
 =================================
 
 
-Replace Axioms in Classes.v with Theorems
-=========================================
+Replace 2 Axioms in Classes.v with Theorems
+===========================================
+this will make the automata executable (via Eval compute in) 
 
 
 
