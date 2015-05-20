@@ -18,7 +18,7 @@ Module Packet (F : FIELDSPEC) (V : VALUESPEC(F)) : PACKET(F)(V).
 
   (* feel the power of automatic instance resolution...!! *)
   Definition finite : Finite t := _.
-  Definition eq_dec : EqType t := _.
+  Definition eq_dec : EqType t := dep_fun_EqType _ _.
   Global Instance : Finite t := finite.
   Global Instance : EqType t := eq_dec.
 

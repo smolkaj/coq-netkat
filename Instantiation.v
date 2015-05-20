@@ -7,7 +7,7 @@ Import ListNotations.
 
 
 
-Module F : FIELDSPEC.
+Module F <: FIELDSPEC.
   
   Inductive t' :=
     | Sw
@@ -34,7 +34,7 @@ End F.
 
 
 
-Module V : VALUESPEC(F).
+Module V <: VALUESPEC(F).
 
   Inductive value :=
     | ZERO
@@ -60,6 +60,17 @@ End V.
 
 Module O := Optimize.Optimize(F)(V).
 Module A := Automata.Automata(F)(V).
+Include A.
+
+
+Definition pk : A.P.t := fun _ => V.ONE.
+Definition trace1 := pk~([])~pk.
+Definition trace2 := pk~([pk])~pk.
+Definition pol1 := A.Drop.
+Definition pol2 := A.Id.
+Definition pol3 := F.Sw==V.ONE;; F.Pt==V.ONE;; F.Vlan==V.ONE.
+Eval compute in A.nfa_lang (A.netkat_nfa pol2) trace1.
+
 
 (* Print O. *)
 (* Print A. *)

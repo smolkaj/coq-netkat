@@ -179,7 +179,7 @@ Next Obligation. auto using in_prod. Defined.
 
 Global Program Instance option_finite `{Finite X} : Finite (option X) := 
   None :: map (@Some X) enum.
-Next Obligation. destruct x; intuition (auto using in_map). Qed.
+Next Obligation. destruct x; intuition (auto using in_map). Defined.
 
 Global Program Instance surjective_Finite Y `(Finite X) (f:X->Y) (p : surjective f) : Finite Y :=
   map f (enum' X).
@@ -295,16 +295,30 @@ Defined.
 Next Obligation. intro eq; apply H1; congruence. Defined.
 
 
+Program Instance dep_fun_EqType `(Finite X) `(forall x:X, EqType(Y x)) : EqType (forall x:X, Y x) :=
+  fun f g => if forallb (fun x => f x =b= g x) (enum' X) =d= true then left _ else right _.
+Next Obligation.
+  rewrite forallb_forall in H1.
+  extensionality x.
+  rewrite <- eqb_eq.
+  apply H1.
+  auto.
+Defined.
+Next Obligation.
+  intro H2.
+  apply H1.
+  subst g.
+  apply forallb_forall.
+  intros x _.
+  apply eqb_refl.
+Defined.
+  
+  
+
+
 (* For now, we state these well known facts as Axioms. *)
 Axiom fun_fin : forall X Y, Finite X -> Finite Y -> Finite (X -> Y).
 Global Instance fun_fin_inst : forall X Y, Finite X -> Finite Y -> Finite (X->Y) := fun_fin.
-
-
-Axiom eq_dec_dep_f : forall X Y,
-  Finite X -> (forall x:X, EqType(Y x)) -> EqType(forall x : X, Y x).
-Global Instance dep_fun_EqType `(Finite X) `(forall x:X, EqType(Y x)) : 
-  EqType (forall x:X, Y x) := eq_dec_dep_f _ _ _ _.
-
 
 Axiom dep_fun_fin : forall X Y,
   Finite X -> (forall x:X, Finite (Y x)) -> Finite (forall x:X, Y x).

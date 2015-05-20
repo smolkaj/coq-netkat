@@ -165,6 +165,7 @@ Arguments nfa_accept {A} q a b : rename.
 Arguments nfa_trans {A} q a b q' : rename.
 
 
+
 (* We must define acceptance with "fuel" n as otherwise Coq cannot be convinced
    that accept terminates. *)
 Fixpoint accept_n {A : nfa} (q : A) gs n :=
