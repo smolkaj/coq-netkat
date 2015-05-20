@@ -1,0 +1,60 @@
+NFA -> DFA (Powerset construction, "Deduplication")
+==================================
+* define DFAs, acceptance of DFAs, language of DFAs
+* give construction NFA -> DFA
+* prove forall A : NFA, nfa_lang(A) = dfa_lang(DFA(A))
+
+
+DFA -> DFA ("Localization")
+===========================
+* define language equivalence modulo field
+* define syntax sugar s1.p1->s2.p2 := dup; sw=s1; pt=p1; sw<-s2; pt<-p2; dup
+* show that for any program p = in; g with A := dfa(p), there exists a
+  dfa A' with only two states s.t.
+    dfa_lang(A') == dfa_lang(A) (modulo some field f)
+  - Assumptions:
+    + g may contain links, but no Dups or switch modifications
+    + in is a predicate with the property t; in = 0 (where t is the union
+      of all links mentioned in g)
+    + the field f does not appear in program p
+  - Intuition:
+    The two states of A' represent the input and output buffers, respectively.
+    Any packet is either entering or leaving a switch (intermediate states
+    are not observed). Going from an input buffer to an output buffer, a packet
+    is processed by a switch; going from an output buffer to an input
+    buffer, a packet is processed by the topology.
+  - Construction of A':
+    + replace all links s1.p1->s2.p2 in p with
+        sw=s1; pt=p1; dup; t; dup; sw=s2; pt=p2
+      to obtain p'.
+    + show p' === p axiomatically.
+    + conclude A := A(p') == A(p).
+    + Cleary A can be two-colored (i.e. A is bipartite). States are
+      alternatingly input buffer and output buffer states, with the start state
+      being an input buffer state.
+    + All output buffer states q have outdegree = 1, i.e. have a unique sucessor
+      suc(q).
+    + Modify all input buffer states q of A s.t.
+      * they only match on packets with f==q
+      * they satisfy 
+          transition q pk pk' q' -> pk'.f==suc(q').
+      * construction:
+          A' := 
+            {| dfa_s := dfa_s A; 
+               accept q pk pk' = pk.f = q && @accept A q pk pk'
+               trans q pk pk' q' = pk.f = q && @trans A q pk pk' q' 
+                                   && pk'.f = suc(q')
+            |}
+      * finally, all input buffer states can be collapsed and all output buffer
+        states can be collapsed, unioning transition and acceptance relations.
+
+
+Implement Kleene Star on Automata
+=================================
+
+
+Replace Axioms in Classes.v with Theorems
+=========================================
+
+
+
