@@ -444,8 +444,8 @@ End nfa_seq.
 
 Parameter nfa_star : nfa -> nfa.
 
-Axiom nfa_star_corrrect A s :
-  (exists n, gs_lang_power (nfa_lang A) n s = true) <-> (nfa_lang (nfa_star A) s = true)
+Axiom nfa_star_correct : forall A s,
+  (exists n, gs_lang_power (nfa_lang A) n s = true) <-> (nfa_lang (nfa_star A) s = true).
 
 
 
