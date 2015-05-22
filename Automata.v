@@ -125,8 +125,19 @@ Qed.
 
 
 (* missing: kleene star *)
-Parameter gs_lang_star : gs_lang -> gs_lang.
+Definition gs_lang_id := [$ s : gs | let 'a~(w)~b := s in (a =b= b) && (w =b= []) ].
 
+Fixpoint gs_lang_power L n :=
+match n with
+  | O => gs_lang_id
+  | S n => gs_lang_conc L (gs_lang_power L n)
+end.
+
+(*
+Parameter gs_lang_star : gs_lang -> gs_lang.
+Axiom lang_star_correct : forall L s,
+  (exists n, gs_lang_power L n s = true) <-> (gs_lang_star L s = true).
+*)
 
 
 (** End languages over guarded strings ########################*)
@@ -433,7 +444,8 @@ End nfa_seq.
 
 Parameter nfa_star : nfa -> nfa.
 
-
+Axiom nfa_star_corrrect A s :
+  (exists n, gs_lang_power (nfa_lang A) n s = true) <-> (nfa_lang (nfa_star A) s = true)
 
 
 
